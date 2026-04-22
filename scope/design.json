@@ -1,0 +1,85 @@
+{
+  "theme": "dark",
+  "archetype": "5 (Jewel & Luxury)",
+  "colors": {
+    "background_primary": "#0B1C2C",
+    "background_secondary": "#112A42",
+    "primary": "#C8A96A",
+    "primary_hover": "#DCC48F",
+    "text_main": "#FFFFFF",
+    "text_muted": "#A1B0C0",
+    "border_color": "rgba(255, 255, 255, 0.1)",
+    "accent_border": "rgba(200, 169, 106, 0.3)"
+  },
+  "typography": {
+    "font_families": {
+      "heading": "'Noto Serif', serif",
+      "body": "'Montserrat', sans-serif"
+    },
+    "guidelines": [
+      "Headlines (H1/H2) MUST use Noto Serif, tightly tracked (tracking-tight), never default to bold; use light or medium weights to convey luxury.",
+      "Body and UI text MUST use Montserrat, tracking-wide for overlines/labels (tracking-[0.2em] uppercase).",
+      "H1 should scale fluidly but not exceed text-6xl. H2 around text-4xl."
+    ]
+  },
+  "layout_and_spacing": {
+    "split_screen_architecture": {
+      "desktop": "100vw, divided exactly 50/50. Left: Main content/Dashboard. Right: AI Advisory Chat.",
+      "mobile": "Stacks vertically. Content on top, AI Chat togglable or floating above.",
+      "implementation": "Use grid-cols-1 lg:grid-cols-2 h-screen overflow-hidden. Left panel scrolls independently. Right panel acts as fixed/sticky chat interface."
+    },
+    "padding": "Generous spacing. p-8 or p-12 inside containers. Use p-6 inside cards. Use gap-8 or gap-12 for grid layouts."
+  },
+  "surfaces_and_components": {
+    "cards": "Flat background (bg-[#112A42] or bg-transparent), 1px subtle border (border-white/10), no heavy shadow. On hover, slight lift and border color shifts to gold/30.",
+    "glassmorphism": "Used for floating AI inputs or sticky navs. bg-[#0B1C2C]/70 backdrop-blur-xl border-t or border-b border-white/10.",
+    "buttons": "Primary buttons: bg-[#C8A96A] text-[#0B1C2C] hover:bg-[#DCC48F] font-semibold tracking-wide transition-all. Secondary: border border-[#C8A96A] text-[#C8A96A] hover:bg-[#C8A96A]/10.",
+    "ai_chat": "Persistent in the right 50% pane. Floating input field with glassmorphism at the bottom. Messages use distinct backgrounds (User: bg-[#C8A96A] text-[#0B1C2C], AI: transparent with white text and gold border left).",
+    "shadcn": "Heavily customize Shadcn components to strip the 'Vercel-look'. Overwrite rounded-md to rounded-sm (very sharp edges fit luxury consulting). Remove default gray rings, use gold focus rings."
+  },
+  "motion_and_interaction": {
+    "hover": "Subtle border color shifts, opacity changes. No heavy scaling.",
+    "loading": "Use ASCII or minimal gold spinners. Avoid standard blue spinning circles.",
+    "transitions": "transition-all duration-300 ease-out"
+  },
+  "icons": {
+    "library": "lucide-react",
+    "style": "Light weight, stroke-width 1.5, matching text color or gold accent."
+  },
+  "media": {
+    "logos": {
+      "bird_icon": "https://customer-assets.emergentagent.com/job_c13d24bf-1e73-40e8-af88-f21bcf07446a/artifacts/j7f8jw6w_s.png",
+      "text_logo": "https://customer-assets.emergentagent.com/job_c13d24bf-1e73-40e8-af88-f21bcf07446a/artifacts/wwz2h99p_c.jpg",
+      "combined_dark": "https://customer-assets.emergentagent.com/job_c13d24bf-1e73-40e8-af88-f21bcf07446a/artifacts/xr9oswxa_g.png",
+      "stacked": "https://customer-assets.emergentagent.com/job_c13d24bf-1e73-40e8-af88-f21bcf07446a/artifacts/pblsrnuu_q.png"
+    },
+    "images": {
+      "hero_background": {
+        "url": "https://images.unsplash.com/photo-1640027659327-96f1043e4278?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NjZ8MHwxfHNlYXJjaHwyfHxkYXJrJTIwbmF2eSUyMGJsdWUlMjBhYnN0cmFjdCUyMGdvbGQlMjB0ZXh0dXJlfGVufDB8fHx8MTc3NTA3NzExM3ww&ixlib=rb-4.1.0&q=85",
+        "description": "Black and gold diagonal abstract texture. Good for right panel or subtle overlay."
+      },
+      "corporate_architecture": {
+        "url": "https://images.pexels.com/photos/28776216/pexels-photo-28776216.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "description": "Modern skyscraper reflecting premium corporate aesthetic."
+      },
+      "executives_meeting": {
+        "url": "https://images.unsplash.com/photo-1764410481612-7544525b2991?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMzl8MHwxfHNlYXJjaHwxfHxidXNpbmVzcyUyMGV4ZWN1dGl2ZXMlMjBtZWV0aW5nJTIwbHV4dXJ5JTIwb2ZmaWNlfGVufDB8fHx8MTc3NTA3NzEwM3ww&ixlib=rb-4.1.0&q=85",
+        "description": "Elegant luxury office desk meeting."
+      },
+      "consultant_working": {
+        "url": "https://images.unsplash.com/photo-1773652924813-297c14dd9b5b?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMzl8MHwxfHNlYXJjaHwyfHxidXNpbmVzcyUyMGV4ZWN1dGl2ZXMlMjBtZWV0aW5nJTIwbHV4dXJ5JTIwb2ZmaWNlfGVufDB8fHx8MTc3NTA3NzEwM3ww&ixlib=rb-4.1.0&q=85",
+        "description": "Ornate wooden office representing high-end consulting strategy."
+      }
+    }
+  },
+  "instructions_to_main_agent": [
+    "Install custom fonts: Noto Serif and Montserrat from Google Fonts via tailwind/CSS imports.",
+    "Implement the 50/50 split screen layout strictly: w-full flex flex-col lg:grid lg:grid-cols-2. Both sides must be scrollable independently on desktop.",
+    "Apply Deep Navy (#0B1C2C) background globally.",
+    "Customize tailwind.config.js to include conssor colors (conssor-navy: '#0B1C2C', conssor-gold: '#C8A96A', etc).",
+    "MANDATORY: Add 'data-testid' to all buttons, inputs, links, and chat elements in kebab-case, role-based format.",
+    "For the AI Chat on the right pane: Make the input field sticky at the bottom with glassmorphism (backdrop-blur-xl bg-[#0B1C2C]/80).",
+    "Never use full-screen bright gradients. Use the abstract dark/gold texture image sparingly or pure CSS radial noise.",
+    "Override Shadcn components: reduce border-radius to rounded-sm or rounded-none to reflect high-end luxury, and change focus rings to gold."
+  ]
+}

@@ -1,0 +1,2470 @@
+# CONSSOR Platform — MVP Specification
+
+> **Version:** 2.1 | **Status:** Draft | **Date:** April 2025  
+> **Product:** Collaborative Intelligence Consulting Platform  
+> **Company:** CONSSOR — India & Turkey Operations
+
+---
+
+
+---
+
+## Executive Summary
+
+**CONSSOR Platform MVP** — A three-portal consulting marketplace powered by AI pricing, dual payment gateways, and subscription-based consultant access.
+
+### Revenue Model
+
+| Revenue Stream | Mechanism | Rate/Amount |
+|---|---|---|
+| **Engagement Fees** | 12% platform commission on every client payment | 12% of gross |
+| **Consultant Subscriptions** | Weekly/Monthly/Annual recurring billing | ₹999/wk · ₹2,999/mo · ₹24,999/yr |
+| **Referral Bonuses** | Paid to consultants from platform's 12% pool | 5% of converted deal value (configurable) |
+
+### Payment Flow Summary
+
+1. **Client Onboarding** → AI generates pricing quote (Groq API) → Admin reviews/approves
+2. **Client Payment** → Stripe (India) or Stripe (International) → Payment confirmed
+3. **Access Gate Unlocked** → Client gains full portal access (messaging, docs, scheduling, milestones)
+4. **Commission Split** → Platform takes 12%, consultant receives 88%
+5. **Payout Approval** → Admin approves consultant payout → Manual bank transfer → Marked as paid
+
+### Consultant Subscription Model
+
+- **Subscription required** to receive client assignments, submit leads, and use the platform
+- **3 tiers:** Starter (weekly), Professional (monthly), Growth (annual)
+- **Free trial:** 7 days on Starter plan, no credit card required
+- **Access gate:** Expired subscription = blocked from new clients, new leads, new messages
+
+### Technology Stack
+
+- **AI Pricing:** Groq Sonnet 4 via Groq API (JSON output for structured pricing)
+- **Payments (India):** Stripe — supports INR, UPI, cards, Net Banking
+- **Payments (International):** Stripe — supports USD/EUR, cards, SEPA
+- **Backend:** Python (Django) — Hosted on AWS
+- **Database:** Supabase (PostgreSQL)
+- **Frontend:** Next.js (React) — Hosted on Vercel
+
+### Project Directory Structure
+
+```text
+/conssor-monorepo
+├── backend/                # Django API service
+├── frontend-landing/       # Marketing & public landing pages
+├── frontend-client/        # Client portal dashboard
+├── frontend-consultant/    # Consultant portal dashboard
+└── frontend-admin/         # Platform admin panel
+```
+
+### Key Features
+
+**Client Portal (5 views)**
+- Onboarding wizard → AI quote → Payment checkout
+- Project tracker with milestones
+- Consultant profile + scheduling
+- NDA & document signing
+- Messaging thread
+
+**Consultant Portal (5 views)**
+- Dashboard with stats + earnings
+- Client roster with filters
+- Lead pipeline with referral tracking
+- Per-client earnings breakdown
+- KYC checklist (Aadhaar, PAN, bank details)
+
+**Admin Panel (5 views)**
+- Consultant-client matching tool
+- Full client + payment status table
+- Consultant directory + subscription status
+- KYC approval queue
+- Revenue dashboard (engagement fees + subscriptions + payouts)
+
+### MVP Timeline Estimate
+
+- **Phase 1 (Weeks 1-4):** Core auth, onboarding wizard, AI pricing integration, database schema
+- **Phase 2 (Weeks 5-8):** Payment gateways (Stripe + Stripe), access gates, subscription billing
+- **Phase 3 (Weeks 9-12):** Client/consultant portals, messaging, document signing, KYC upload
+- **Phase 4 (Weeks 13-16):** Admin panel, matching tool, revenue dashboard, payout workflows
+- **Total:** ~16 weeks for full MVP with all 15 views + payment + subscriptions
+
+---
+## Table of Contents
+
+1. [Product Overview](#1-product-overview)
+2. [User Roles & Access Levels](#2-user-roles--access-levels)
+3. [Payment & Monetisation Architecture](#3-payment--monetisation-architecture)
+   - 3.1 AI-Powered Engagement Pricing
+   - 3.2 Client Payment Flow & Access Gate
+   - 3.3 Platform Commission (12%)
+   - 3.4 Consultant Subscription Plans
+4. [Client Portal](#4-client-portal)
+   - 4.1 Onboarding Wizard
+   - 4.2 AI Quote & Payment
+   - 4.3 Project Tracker
+   - 4.4 Consultant Profile & Scheduling
+   - 4.5 NDA & Document Signing
+   - 4.6 Messaging Thread
+5. [Consultant Portal](#5-consultant-portal)
+   - 5.1 Dashboard & Stats
+   - 5.2 Client Roster
+   - 5.3 Lead Generation & Pipeline
+   - 5.4 Earnings Breakdown
+   - 5.5 KYC Status Checklist
+6. [Admin Panel](#6-admin-panel)
+   - 6.1 Consultant Matching
+   - 6.2 Full Client Table
+   - 6.3 Consultant Directory
+   - 6.4 KYC Approval Queue
+   - 6.5 Platform Revenue & Payouts
+7. [Data Models](#7-data-models)
+8. [Navigation & Routing Map](#8-navigation--routing-map)
+9. [Tech Stack Recommendations](#9-tech-stack-recommendations)
+10. [MVP Scope & Out-of-Scope](#10-mvp-scope--out-of-scope)
+11. [Payment & Subscription Implementation Guide](#11-payment--subscription-implementation-guide)
+   - 11.1 AI Pricing Engine Integration
+   - 11.2 Payment Gateway Integration
+   - 11.3 Consultant Subscription Billing
+   - 11.4 Access Control Middleware
+   - 11.5 Revenue Calculations
+   - 11.6 Email Notifications
+12. [Demo & Testing Guide](#12-demo--testing-guide)
+   - 12.1 Demo Credentials
+   - 12.2 Demo Data Setup
+   - 12.3 Demo User Journeys
+   - 12.4 Testing Scenarios
+   - 12.5 Video Demo Script
+   - 12.6 API Endpoint Reference
+   - 12.7 Environment Setup for Demo
+
+---
+
+## 1. Product Overview
+
+CONSSOR is a B2B consulting platform built around **Collaborative Intelligence** — the intersection of deep human expertise and AI-powered analysis. The platform connects organizations with vetted domain-specific consultants across 16+ industry verticals.
+
+### Core Value Proposition
+
+| For Clients | For Consultants | For CONSSOR Admin |
+|---|---|---|
+| Structured onboarding and scoped engagements | Transparent earnings and referral bonuses | Full oversight of matching, KYC, and revenue |
+| AI-augmented project delivery | Built-in KYC and compliance tooling | Streamlined payout and approval workflows |
+| Direct communication with assigned consultants | Pipeline and lead management tools | Platform health metrics and reporting |
+
+### Services Offered (from website)
+- Strategic Consulting
+- Digital Transformation
+- Financial Advisory
+- Technical Consulting
+
+### Industry Verticals Supported
+Aerospace & Defense · Agriculture & FoodTech · Automotive & Mobility · Chemicals & Materials · Smart Infrastructure · Consumer & Retail · Digital Economy & ICT · Energy & Utilities · Financial Services · Healthcare & Life Sciences · Industrial & Manufacturing · Media & Entertainment · Private Equity · Public Sector · Telecommunications · Transportation & Logistics
+
+---
+
+## 2. User Roles & Access Levels
+
+| Role | Description | Portal Access |
+|---|---|---|
+| **Client** | Organizations or individuals seeking consulting services | Client Portal |
+| **Consultant** | Vetted domain experts delivering consulting engagements | Consultant Portal |
+| **Admin** | CONSSOR internal staff managing the platform | Admin Panel |
+
+### Permission Matrix
+
+| Feature | Client | Consultant | Admin |
+|---|---|---|---|
+| View own project milestones | ✅ | ❌ | ✅ |
+| View assigned client roster | ❌ | ✅ | ✅ |
+| Sign NDAs and documents | ✅ | ✅ | ✅ |
+| Submit KYC documents | ❌ | ✅ | ❌ |
+| Approve/reject KYC | ❌ | ❌ | ✅ |
+| View platform revenue | ❌ | ❌ | ✅ |
+| Generate leads | ❌ | ✅ | ✅ |
+| Assign consultants to clients | ❌ | ❌ | ✅ |
+
+---
+
+## 3. Payment & Monetisation Architecture
+
+> This section defines all money flows on the platform: how clients are charged, how the platform takes its cut, and how consultants pay to access the platform.
+
+---
+
+### 3.1 AI-Powered Engagement Pricing
+
+After a client completes the onboarding wizard, the platform uses an AI engine to analyse the submitted scope and generate a recommended engagement price before any human interaction begins.
+
+#### How It Works
+
+1. Client submits the 6-step onboarding wizard (domain, scope, stage, budget, engagement type)
+2. The platform passes all structured onboarding data to the AI pricing engine
+3. AI analyses:
+   - Scope complexity (number of service areas, breadth of problem)
+   - Industry vertical (some verticals command higher rates — e.g., Financial Services vs. Retail)
+   - Project stage (Ideation is lighter; M&A / Transaction Support is heavier)
+   - Engagement type (One-time vs. Retainer)
+   - Client-stated budget (used as a soft anchor, not a hard cap)
+   - Historical data from similar past engagements (feeds back into model over time)
+4. AI returns a **recommended price range** and a **suggested fixed quote**
+5. Admin reviews and can override the AI quote before it is shown to the client
+6. Client sees the final quote and proceeds to payment
+
+#### AI Prompt Inputs (Structured)
+
+```
+{
+  "domain_tags": ["Financial Services", "Digital Economy & ICT"],
+  "engagement_scope": ["Strategic Consulting", "Digital Transformation"],
+  "project_stage": "Growth / Scaling",
+  "engagement_type": "Retainer",
+  "budget_range": "$50,000 – $200,000",
+  "description": "Redesign core banking digital product and define a 3-year tech roadmap.",
+  "country": "India"
+}
+```
+
+#### AI Output Structure
+
+```
+{
+  "recommended_price_usd": 48000,
+  "price_range_low": 38000,
+  "price_range_high": 62000,
+  "pricing_rationale": "Multi-scope engagement combining strategic and digital workstreams in a high-complexity vertical. Growth stage with retainer model suggests sustained delivery over 3-6 months.",
+  "estimated_duration_weeks": 16,
+  "confidence_score": 0.82
+}
+```
+
+#### Admin Override
+- Admin sees the AI quote + rationale in the Admin Panel before it reaches the client
+- Can adjust the final quote up or down
+- Must add a note if overriding (for audit trail)
+- Once approved by Admin: quote is locked and dispatched to the client dashboard
+
+---
+
+### 3.2 Client Payment Flow & Access Gate
+
+Payment is a **hard gate**: clients cannot access messaging, project tracker, document signing, or consultant scheduling until full payment is confirmed.
+
+#### Payment Flow
+
+```
+Onboarding Complete
+       ↓
+AI Pricing Engine generates quote
+       ↓
+Admin reviews & approves quote
+       ↓
+Client receives quote on dashboard
+       ↓
+Client clicks "Proceed to Payment"
+       ↓
+Payment Gateway (Stripe / Stripe)
+       ↓
+Payment Confirmed → Engagement Activated
+       ↓
+Full platform access unlocked:
+  ✅ Messaging thread
+  ✅ Project tracker & milestones
+  ✅ Consultant profile & scheduling
+  ✅ NDA & document signing
+```
+
+#### Quote Review Screen (Client-facing)
+
+| Field | Description |
+|---|---|
+| Engagement Title | Auto-generated from scope (e.g., "Digital Transformation — FinServ Growth") |
+| Scope Summary | Bullet list of selected services |
+| Estimated Duration | X weeks |
+| Pricing Model | Fixed / Retainer |
+| Total Amount | $XX,XXX |
+| Platform Assurance | "Secured by CONSSOR. Dedicated consultant, milestone tracking, document signing." |
+
+CTA: **"Pay & Unlock Engagement"** (primary) · "Request Revision" (secondary)
+
+#### Request Revision Flow
+- Client flags disagreement with the quote via free-text field
+- Submission notifies Admin → Admin adjusts quote → Client re-reviews
+
+#### Payment Gateways
+- **India:** Stripe (INR, UPI, Net Banking, cards)
+- **Turkey / International:** Stripe (USD / EUR, cards, SEPA)
+- Currency auto-detected from client country at checkout
+
+#### Payment Statuses
+
+| Status | Description |
+|---|---|
+| `awaiting_quote` | AI quote being generated or pending admin approval |
+| `quote_sent` | Client has received and can view the quote |
+| `payment_pending` | Client initiated payment, gateway processing |
+| `paid` | Payment confirmed, engagement fully active |
+| `revision_requested` | Client asked for quote adjustment |
+| `failed` | Payment gateway returned failure |
+| `refunded` | Admin issued a refund |
+
+#### Access Gate Logic
+
+```
+IF engagement.payment_status != "paid":
+  BLOCK: /client/messages, /client/projects,
+         /client/consultant/:id, /client/documents
+  SHOW:  "Complete payment to unlock your engagement"
+  SHOW:  Quote card + Pay CTA
+
+IF engagement.payment_status == "paid":
+  ALLOW: Full client portal access
+```
+
+---
+
+### 3.3 Platform Commission — 12% Fee
+
+CONSSOR charges a **12% platform fee** on every client payment, deducted before the consultant's payout is calculated.
+
+#### Fee Calculation Example
+
+```
+Client Pays:           $48,000  (100%)
+Platform Fee (12%):     $5,760  → credited to CONSSOR
+Consultant Receives:   $42,240  → net payout (88%)
+```
+
+#### Fee Rules
+- Applied on the **total engagement value** at time of payment confirmation
+- For milestone-based retainers, fee is applied per milestone payment release
+- Referral bonuses are paid from CONSSOR's 12% pool (not deducted from the consultant's 88%)
+- Admin can override the fee % per engagement if needed (default: 12%)
+
+#### Visibility
+- **Admin:** Sees gross paid, platform fee, and consultant net payout
+- **Consultant:** Sees only their net payout (88%)
+- **Client:** Sees total amount paid; the internal fee split is not disclosed
+
+---
+
+### 3.4 Consultant Subscription Plans
+
+Consultants pay a recurring subscription to access CONSSOR — enabling them to receive client assignments, manage leads, use earnings tools, and maintain a verified profile.
+
+> The subscription is independent of earnings. Consultants always receive 88% of client payments regardless of plan tier. The plan governs platform access limits and feature availability.
+
+#### Plan Comparison
+
+| Feature | Starter | Professional | Growth |
+|---|---|---|---|
+| **Billing Cycle** | Weekly | Monthly | Annual |
+| **Price (INR)** | ₹999 / week | ₹2,999 / month | ₹24,999 / year |
+| **Price (USD approx.)** | ~$12 / week | ~$36 / month | ~$300 / year |
+| **Savings vs. Starter** | — | ~25% | ~52% |
+| Max Active Clients | 2 | 5 | Unlimited |
+| Lead Submissions / Month | 3 | 10 | Unlimited |
+| Referral Bonus Eligible | ❌ | ✅ | ✅ |
+| Profile Visibility | Standard | Enhanced | Featured (priority) |
+| KYC Fast-Track | ❌ | ❌ | ✅ |
+| Dedicated Account Manager | ❌ | ❌ | ✅ |
+| Analytics Dashboard | Basic | Standard | Advanced |
+| Priority Assignment Matching | ❌ | ✅ | ✅ |
+| Support | Email only | Email + Chat | Email + Chat + Phone |
+
+#### Billing Details
+- Billed via Stripe (India) or Stripe (international)
+- Auto-renewal on by default; consultant can cancel anytime
+- Access continues until end of the current billing period on cancellation
+- **Downgrade:** Effective at next billing date
+- **Upgrade:** Prorated charge applied immediately
+- **Free Trial:** 7-day Starter access on signup, no credit card required (max 1 client, 2 leads)
+
+#### Subscription States
+
+| Status | Description |
+|---|---|
+| `trial` | 7-day free trial active |
+| `active` | Valid subscription, full plan access |
+| `past_due` | Payment failed; 3-day grace period before access lock |
+| `cancelled` | Cancelled; access continues until period end |
+| `expired` | Period ended, no active subscription |
+
+#### Consultant Access Gate
+
+```
+IF consultant.subscription_status IN ["expired", "past_due" after grace]:
+  BLOCK: Receiving new client assignments
+         Submitting new leads
+         Messaging new clients
+  SHOW:  "Your subscription has expired. Renew to continue."
+  SHOW:  Plan selection + payment CTA
+```
+
+#### Admin Controls
+- Admin can manually grant complimentary access or override subscription status
+- All consultant subscription statuses visible in the Consultant Directory
+- Subscription revenue tracked as a separate line item in the Admin revenue view
+
+---
+
+## 4. Client Portal
+
+### 4.1 Onboarding Wizard
+
+
+A 6-step guided onboarding flow to capture client context and route them to the right consultant.
+
+#### Step-by-Step Flow
+
+**Step 1 — Account Setup**
+- Fields: Full name, Organization name, Email, Phone number, Country
+- Validation: Email format, required fields
+
+**Step 2 — Industry & Domain Tagging**
+- Input type: Multi-select tag picker
+- Options: All 16 CONSSOR industry verticals
+- Max selections: 3 (primary + secondary domains)
+- Tag display: Pill/badge format with remove option
+
+**Step 3 — Engagement Scope**
+- Input type: Multi-select checkboxes
+- Options:
+  - Strategic Consulting
+  - Digital Transformation
+  - Financial Advisory
+  - Technical Consulting
+- Free-text field: "Briefly describe your challenge" (500 char limit)
+
+**Step 4 — Project Stage**
+- Input type: Single-select radio
+- Options:
+  - Ideation / Early Stage
+  - Validation / Research
+  - Growth / Scaling
+  - Optimization / Turnaround
+  - M&A / Transaction Support
+
+**Step 5 — Budget Range**
+- Input type: Slider + dropdown
+- Ranges (USD):
+  - Under $10,000
+  - $10,000 – $50,000
+  - $50,000 – $200,000
+  - $200,000+
+  - Prefer not to disclose
+- Toggle: One-time engagement / Retainer
+
+**Step 6 — Review & Submit**
+- Summary card displaying all entered information
+- Editable (click-to-edit per section)
+- CTA: "Submit & Find Consultants"
+- Post-submit: Confirmation screen + email notification
+
+#### UI Notes
+- Progress bar displayed at top (Step X of 6)
+- Back/Next navigation on each step
+- Auto-save between steps (localStorage or session)
+- Mobile-responsive layout
+
+---
+
+### 4.2 Project Tracker
+
+Central hub for the client to track active and past engagements.
+
+#### Layout
+- Top: Engagement summary card (Consultant name, Domain, Start date, Status badge)
+- Main: Milestone checklist
+- Right sidebar: Quick actions (Message consultant, Download documents, Request update)
+
+#### Milestone Checklist
+
+| Field | Type | Description |
+|---|---|---|
+| Milestone Name | Text | e.g., "Kick-off Call", "Diagnostic Report Delivered" |
+| Due Date | Date | Target completion date |
+| Status | Badge | Not Started / In Progress / Completed / Overdue |
+| Owner | Tag | Client / Consultant / Both |
+| Notes | Expandable text | Optional milestone notes |
+| File Attachment | Upload/link | Deliverable documents |
+
+#### Status Badges
+- `Not Started` — Grey
+- `In Progress` — Blue
+- `Completed` — Green
+- `Overdue` — Red
+
+#### Engagement Statuses
+- Active
+- On Hold
+- Completed
+- Cancelled
+
+#### Data Displayed
+- Total milestones
+- % completed
+- Days remaining
+- Last activity timestamp
+
+---
+
+### 4.3 Consultant Profile & Scheduling
+
+Dedicated view for the client to review their assigned consultant and book sessions.
+
+#### Consultant Profile Card
+- Avatar / profile photo
+- Full name + designation
+- Domain tags (e.g., "FinTech", "Digital Transformation")
+- Bio (250 words max)
+- Years of experience
+- Past engagement summary (anonymized)
+- LinkedIn link (optional)
+- Rating (post-engagement, 1–5 stars)
+
+#### Scheduling Panel
+- Calendar view: Weekly availability grid
+- Slot duration options: 30 min / 60 min / 90 min
+- Time zone selector (auto-detects client timezone)
+- Session type: Video call / In-person / Async review
+- Add note for the session (optional)
+- CTA: "Confirm Booking"
+
+#### Post-booking
+- Confirmation email sent to client and consultant
+- Session added to both parties' dashboards
+- Reminders: 24h and 1h before session
+
+---
+
+### 4.4 NDA & Document Signing
+
+Secure document signing and management for client engagements.
+
+#### Document Types
+- Non-Disclosure Agreement (NDA)
+- Statement of Work (SOW)
+- Engagement Letter
+- Custom uploads (Admin-created)
+
+#### Signing Flow
+1. Document presented in embedded PDF viewer
+2. Client scrolls to review full document
+3. Signature field: Typed name + drawn signature (canvas) + date auto-filled
+4. "Sign & Submit" button
+5. Signed copy emailed to both parties; stored in platform
+
+#### Document List View
+
+| Column | Description |
+|---|---|
+| Document Name | NDA, SOW, etc. |
+| Sent Date | When document was issued |
+| Status | Pending / Signed / Expired |
+| Signed Date | If completed |
+| Download | PDF download button |
+
+#### Permissions
+- Clients can view and sign their assigned documents
+- Cannot upload documents (Admin only)
+- Can download their own signed copies
+
+---
+
+### 4.5 Messaging Thread
+
+In-platform async messaging between client and assigned consultant.
+
+#### Thread Layout
+- Left panel: Conversation list (if multiple consultants/admins)
+- Right panel: Active thread
+- Sticky input bar at bottom
+
+#### Message Features
+- Text messages (rich text: bold, italic, bullet)
+- File attachments (PDF, DOCX, XLSX, images — max 20MB)
+- Read receipts (Sent / Delivered / Read)
+- Timestamps
+- Message search (keyword)
+
+#### Participants
+- Client ↔ Assigned Consultant
+- Admin can join/observe any thread
+- System messages (e.g., "Milestone marked complete")
+
+#### Notifications
+- Email notification on new unread message (after 15 min inactivity)
+- In-app notification badge
+
+---
+
+## 5. Consultant Portal
+
+### 5.1 Dashboard with Session Stats & Earnings Summary
+
+The home screen consultants see upon login.
+
+#### Stats Cards (Top Row)
+| Metric | Description |
+|---|---|
+| Active Clients | Total current engagements |
+| Sessions This Month | Completed sessions in current month |
+| Upcoming Sessions | Next 7 days |
+| Pending Milestones | Milestones due within 14 days |
+
+#### Earnings Summary Widget
+- Total earnings (all time)
+- Earnings this month
+- Pending payouts (approved but not yet disbursed)
+- Referral income (separate line item)
+- Mini bar chart: Monthly earnings (last 6 months)
+
+#### Recent Activity Feed
+- Last 5 messages received
+- Last 3 milestone updates
+- Recent document signing requests
+- KYC status notifications
+
+#### Quick Links
+- View Client Roster
+- Schedule a Session
+- Submit Lead
+- Check KYC Status
+
+---
+
+### 5.2 Client Roster with Domain Tags and Stages
+
+Full list of all clients assigned to the consultant.
+
+#### Table Columns
+
+| Column | Description |
+|---|---|
+| Client Name | Organization name |
+| Contact Person | Primary point of contact |
+| Domain Tags | Industry vertical tags (pills) |
+| Engagement Scope | Service type (e.g., Strategic, Digital) |
+| Project Stage | Ideation / Growth / Optimization etc. |
+| Start Date | Engagement start |
+| Status | Active / On Hold / Completed |
+| Actions | View Profile · Message · View Milestones |
+
+#### Filters
+- By domain tag
+- By project stage
+- By engagement status
+- By start date range
+
+#### Search
+- Keyword search by client name or domain
+
+---
+
+### 5.3 Lead Generation Form + Pipeline Tracker with Referral Bonuses
+
+Tools for consultants to submit and track new business leads.
+
+#### Lead Submission Form
+
+| Field | Type | Notes |
+|---|---|---|
+| Lead Name | Text | Organization or individual name |
+| Contact Email | Email | Decision-maker contact |
+| Contact Phone | Phone | Optional |
+| Industry Domain | Dropdown | CONSSOR verticals |
+| Estimated Deal Value | Currency | USD |
+| Engagement Type | Dropdown | One-time / Retainer |
+| Description | Textarea | Context on the lead |
+| Source | Dropdown | Network / Conference / Cold outreach / Referral |
+
+CTA: "Submit Lead"
+
+#### Pipeline Tracker
+
+Kanban-style or table view of submitted leads.
+
+**Pipeline Stages:**
+- `Submitted` → `Under Review` → `Client Contacted` → `Proposal Sent` → `Won` / `Lost`
+
+**Table Columns:**
+| Column | Description |
+|---|---|
+| Lead Name | Organization |
+| Domain | Industry tag |
+| Submitted Date | When consultant submitted |
+| Stage | Current pipeline stage |
+| Est. Value | Deal size |
+| Referral Bonus | Calculated bonus amount |
+| Status | Active / Won / Lost |
+
+#### Referral Bonus Logic
+- Bonus triggered when a submitted lead converts to a **Won** status
+- Displayed as: "You earned ₹X / $X referral bonus for [Client Name]"
+- Bonus rates configurable by Admin (e.g., 5% of first invoice, flat fee)
+- Bonus shown as Pending until payout is approved by Admin
+
+---
+
+### 5.4 Client-Based Earnings Breakdown
+
+Detailed view of earnings per client and referral income.
+
+#### Layout
+- Top: Aggregate summary (Total earned, Total pending, Total paid out)
+- Main table: Per-client earnings
+- Bottom section: Referral income table
+
+#### Per-Client Earnings Table
+
+| Column | Description |
+|---|---|
+| Client Name | Engagement client |
+| Engagement Type | One-time / Retainer |
+| Sessions Delivered | Count of completed sessions |
+| Invoiced Amount | Total billed |
+| Platform Fee (%) | CONSSOR's cut |
+| Consultant Payout | Net amount due to consultant |
+| Status | Paid / Pending / Processing |
+
+#### Referral Income Table
+
+| Column | Description |
+|---|---|
+| Referred Client | Lead that converted |
+| Conversion Date | When deal was won |
+| Deal Value | Total deal size |
+| Bonus % | Referral rate applied |
+| Bonus Amount | Calculated payout |
+| Payout Status | Pending / Approved / Paid |
+
+#### Export
+- Download as CSV or PDF
+
+---
+
+### 5.5 KYC Status Checklist
+
+Compliance checklist for consultant onboarding and ongoing verification.
+
+#### KYC Items
+
+| Document | Status Options | Notes |
+|---|---|---|
+| Aadhaar Card | Not Submitted / Submitted / Verified / Rejected | Front + back upload |
+| PAN Card | Not Submitted / Submitted / Verified / Rejected | Single image upload |
+| Background Check | Not Initiated / In Progress / Cleared / Flagged | Third-party initiated by Admin |
+| Bank Account Details | Not Submitted / Submitted / Verified / Rejected | IFSC + Account number |
+| Profile Photo | Not Uploaded / Uploaded / Approved | For consultant profile |
+| Signed Consultant Agreement | Not Signed / Signed | In-platform signing |
+
+#### Status Display
+- Progress bar: X of 6 items verified
+- Each item shows status badge + upload button (if action required)
+- Rejected items show rejection reason + re-upload option
+
+#### Notifications
+- Email alert when any document is approved, rejected, or requires action
+- Dashboard badge shows pending KYC items
+
+#### Payout Lock
+- Payouts are **locked** until all required KYC items are verified
+- Warning banner displayed on earnings page if KYC is incomplete
+
+---
+
+## 6. Admin Panel
+
+### 6.1 Consultant Matching by Domain
+
+Tool for assigning consultants to incoming client requests by domain expertise.
+
+#### Layout
+- Left panel: Unassigned client requests list
+- Right panel: Available consultant pool
+
+#### Client Request Card (Left Panel)
+- Client name + organization
+- Domain tags requested
+- Engagement scope
+- Project stage
+- Budget range
+- Date submitted
+
+#### Consultant Matching Panel (Right Panel)
+
+| Column | Description |
+|---|---|
+| Consultant Name | Full name |
+| Domain Expertise | Tags matching client need |
+| Current Load | Active client count |
+| Availability | Available / Busy / On Leave |
+| KYC Status | Verified / Pending |
+| Rating | Avg. client rating |
+| Actions | Assign button |
+
+#### Matching Logic (Manual MVP)
+- Admin manually reviews and clicks "Assign" to link consultant to client
+- System sends notification to both consultant and client upon assignment
+- Future: AI-assisted auto-matching based on domain tags and availability
+
+#### Assign Confirmation Modal
+- Shows: Client name, Consultant name, Domain overlap
+- CTA: Confirm Assignment / Cancel
+
+---
+
+### 6.2 Full Client Table with Assignment Status
+
+Complete directory of all clients on the platform.
+
+#### Table Columns
+
+| Column | Description |
+|---|---|
+| Client ID | Auto-generated unique ID |
+| Organization | Company name |
+| Contact Name | Primary contact |
+| Email | Contact email |
+| Domain Tags | Selected verticals |
+| Onboarding Date | When they completed wizard |
+| Assigned Consultant | Linked consultant name (or "Unassigned") |
+| Assignment Status | Unassigned / Assigned / Active / Completed |
+| Engagement Stage | Project stage |
+| Actions | View · Edit · Reassign · Archive |
+
+#### Filters
+- By assignment status
+- By domain tag
+- By onboarding date range
+- By consultant
+
+#### Bulk Actions
+- Bulk export (CSV)
+- Bulk reassign
+
+---
+
+### 6.3 Consultant Directory with KYC Status and Earnings
+
+Master list of all consultants with compliance and financial overview.
+
+#### Table Columns
+
+| Column | Description |
+|---|---|
+| Consultant ID | Auto-generated ID |
+| Full Name | Consultant name |
+| Email | Registered email |
+| Domain Expertise | Tags |
+| KYC Status | All Verified / Pending Items / Rejected |
+| Active Clients | Current engagement count |
+| Total Earnings | All-time gross earnings |
+| Pending Payout | Amount due for disbursement |
+| Onboarded Date | Platform join date |
+| Actions | View · KYC Review · Manage Earnings · Deactivate |
+
+#### KYC Quick Status
+- Green dot: All KYC items verified
+- Yellow dot: 1–2 items pending
+- Red dot: Item rejected or flagged
+
+---
+
+### 6.4 KYC Approval Queue with Approve/Reject Actions
+
+Dedicated queue for reviewing and actioning consultant KYC submissions.
+
+#### Queue Layout
+- Filter tabs: All · Pending · Approved · Rejected
+- Each item is a card with document preview
+
+#### KYC Queue Item Card
+
+| Field | Description |
+|---|---|
+| Consultant Name | Name + ID |
+| Document Type | Aadhaar / PAN / Bank Details / etc. |
+| Submitted Date | When uploaded |
+| Document Preview | Thumbnail or "View Full Document" link |
+| Status | Pending Review |
+| Actions | ✅ Approve · ❌ Reject |
+
+#### Reject Flow
+- Clicking Reject opens a modal
+- Required: Select rejection reason (dropdown)
+  - Document unclear/blurry
+  - Information mismatch
+  - Expired document
+  - Other (free text)
+- System sends automated rejection email to consultant with reason
+
+#### Approval
+- One-click approval
+- Document status updated to "Verified"
+- Consultant notified via email
+- KYC progress bar updated in consultant portal
+
+---
+
+### 6.5 Platform Revenue and Payout Breakdown
+
+Financial overview of CONSSOR's platform economics.
+
+#### Top Summary Cards
+
+| Metric | Description |
+|---|---|
+| Total Platform Revenue | Gross invoiced to all clients |
+| Total Consultant Payouts | Amount disbursed/due to consultants |
+| Platform Net Revenue | Revenue minus consultant payouts |
+| Pending Payouts | Approved payouts not yet disbursed |
+| Referral Bonuses Issued | Total referral payouts |
+
+#### Revenue by Month (Chart)
+- Bar or line chart: Last 12 months
+- Stacked: Client invoices vs. consultant payouts vs. net
+
+#### Consultant Payout Table
+
+| Column | Description |
+|---|---|
+| Consultant Name | Name |
+| Period | Month/Year |
+| Gross Earnings | Total invoiced for their clients |
+| Platform Fee | CONSSOR's % cut |
+| Net Payout | Amount due to consultant |
+| Referral Bonuses | Bonus amount |
+| Total Due | Net payout + bonuses |
+| Status | Pending / Approved / Paid |
+| Actions | Approve Payout · Mark as Paid · View Breakdown |
+
+#### Approve & Disburse Flow
+1. Admin reviews consultant payout row
+2. Clicks "Approve Payout"
+3. Confirmation modal with amount breakdown
+4. Upon confirm: Status → "Approved", payout queued
+5. Admin or finance team processes transfer externally
+6. Admin clicks "Mark as Paid" → status → "Paid"
+7. Consultant receives email notification
+
+#### Export
+- Full payout report as CSV or PDF
+- Filter by month, consultant, status
+
+---
+
+## 7. Data Models
+
+### Client
+
+```
+Client {
+  id: UUID
+  organization_name: string
+  contact_name: string
+  email: string
+  phone: string
+  country: string
+  domain_tags: string[]          // CONSSOR industry verticals
+  engagement_scope: string[]     // Services selected
+  project_stage: enum
+  budget_range: enum
+  engagement_type: enum          // one-time | retainer
+  assigned_consultant_id: UUID?
+  assignment_status: enum        // unassigned | assigned | active | completed
+  onboarded_at: timestamp
+  created_at: timestamp
+}
+```
+
+### Consultant
+
+```
+Consultant {
+  id: UUID
+  full_name: string
+  email: string
+  phone: string
+  domain_expertise: string[]
+  bio: string
+  years_experience: number
+  linkedin_url: string?
+  availability_status: enum      // available | busy | on_leave
+  kyc_status: enum               // pending | partial | verified | flagged
+  active_client_count: number
+  rating: float
+  onboarded_at: timestamp
+  created_at: timestamp
+}
+```
+
+### KYC Document
+
+```
+KYCDocument {
+  id: UUID
+  consultant_id: UUID
+  document_type: enum            // aadhaar | pan | bank_account | background_check | photo | agreement
+  file_url: string
+  submitted_at: timestamp
+  reviewed_at: timestamp?
+  reviewed_by: UUID?             // Admin user
+  status: enum                   // not_submitted | submitted | verified | rejected
+  rejection_reason: string?
+}
+```
+
+### Engagement / Project
+
+```
+Engagement {
+  id: UUID
+  client_id: UUID
+  consultant_id: UUID
+  scope: string[]
+  stage: enum
+  status: enum                   // active | on_hold | completed | cancelled
+  start_date: date
+  end_date: date?
+  milestones: Milestone[]
+  created_at: timestamp
+}
+```
+
+### Milestone
+
+```
+Milestone {
+  id: UUID
+  engagement_id: UUID
+  name: string
+  due_date: date
+  status: enum                   // not_started | in_progress | completed | overdue
+  owner: enum                    // client | consultant | both
+  notes: string?
+  attachment_url: string?
+  completed_at: timestamp?
+}
+```
+
+### Lead
+
+```
+Lead {
+  id: UUID
+  submitted_by: UUID             // Consultant ID
+  organization_name: string
+  contact_email: string
+  contact_phone: string?
+  domain: string
+  estimated_value: number
+  engagement_type: enum
+  description: string
+  source: enum
+  pipeline_stage: enum           // submitted | under_review | contacted | proposal_sent | won | lost
+  referral_bonus_amount: number?
+  referral_bonus_status: enum    // not_applicable | pending | approved | paid
+  submitted_at: timestamp
+}
+```
+
+### Payout
+
+```
+Payout {
+  id: UUID
+  consultant_id: UUID
+  period_month: number
+  period_year: number
+  gross_earnings: number
+  platform_fee_pct: float
+  platform_fee_amount: number
+  net_payout: number
+  referral_bonus: number
+  total_due: number
+  status: enum                   // pending | approved | paid
+  approved_by: UUID?
+  approved_at: timestamp?
+  paid_at: timestamp?
+}
+```
+
+### Engagement Quote
+
+```
+EngagementQuote {
+  id: UUID
+  engagement_id: UUID
+  ai_recommended_price: number       // AI output
+  ai_price_range_low: number
+  ai_price_range_high: number
+  ai_rationale: string
+  ai_confidence_score: float
+  ai_estimated_weeks: number
+  admin_override_price: number?      // Set if admin adjusted
+  admin_override_note: string?
+  final_price: number                // What client sees
+  status: enum                       // pending_admin | sent_to_client | revision_requested | accepted
+  created_at: timestamp
+  sent_at: timestamp?
+}
+```
+
+### ClientPayment
+
+```
+ClientPayment {
+  id: UUID
+  engagement_id: UUID
+  client_id: UUID
+  quote_id: UUID
+  amount: number
+  currency: enum                     // INR | USD | EUR
+  gateway: enum                      // Stripe | stripe
+  gateway_payment_id: string         // Gateway's transaction ID
+  platform_fee_pct: float            // 0.12
+  platform_fee_amount: number
+  consultant_payout_amount: number   // amount * (1 - platform_fee_pct)
+  status: enum                       // pending | paid | failed | refunded
+  paid_at: timestamp?
+  refunded_at: timestamp?
+  created_at: timestamp
+}
+```
+
+### ConsultantSubscription
+
+```
+ConsultantSubscription {
+  id: UUID
+  consultant_id: UUID
+  plan: enum                         // starter | professional | growth
+  billing_cycle: enum                // weekly | monthly | annual
+  price_inr: number
+  price_usd: number
+  status: enum                       // trial | active | past_due | cancelled | expired
+  gateway: enum                      // Stripe | stripe
+  gateway_subscription_id: string
+  trial_ends_at: timestamp?
+  current_period_start: timestamp
+  current_period_end: timestamp
+  cancelled_at: timestamp?
+  created_at: timestamp
+}
+```
+
+
+---
+
+## 8. Navigation & Routing Map
+
+### Client Portal Routes
+
+```
+/client
+  /onboarding          → 6-step wizard
+  /dashboard           → Overview (redirect after onboarding)
+  /projects            → Project tracker (milestones)
+  /projects/:id        → Single project detail
+  /consultant/:id      → Consultant profile + scheduling
+  /payment             → Quote review + payment checkout
+  /documents           → NDA & document signing
+  /messages            → Messaging thread
+  /settings            → Account settings
+```
+
+### Consultant Portal Routes
+
+```
+/consultant
+  /dashboard           → Stats + earnings summary
+  /clients             → Client roster
+  /clients/:id         → Single client detail
+  /leads               → Lead form + pipeline tracker
+  /earnings            → Per-client earnings breakdown
+  /kyc                 → KYC status checklist
+  /messages            → Messaging thread
+  /schedule            → Availability calendar
+  /subscription        → Plan selection + billing management
+  /settings            → Account settings
+```
+
+### Admin Panel Routes
+
+```
+/admin
+  /dashboard           → Platform overview
+  /matching            → Consultant matching tool
+  /clients             → Full client table
+  /consultants         → Consultant directory
+  /kyc-queue           → KYC approval queue
+  /revenue             → Platform revenue & payout breakdown
+  /subscriptions       → Consultant subscription management
+  /quotes              → Pending AI quote review & approval
+  /settings            → Platform settings
+```
+
+---
+
+## 9. Tech Stack Recommendations
+
+### Frontend
+| Layer | Recommendation |
+|---|---|
+| Framework | Next.js (React) |
+| Styling | Tailwind CSS |
+| Component Library | shadcn/ui or Radix UI |
+| State Management | Zustand or React Query |
+| Forms | React Hook Form + Zod |
+| Charts | Recharts or Chart.js |
+| PDF Viewer | react-pdf |
+| File Upload | Uppy or react-dropzone |
+| Calendar / Scheduling | FullCalendar or Cal.com embedded |
+
+### Backend
+| Layer | Recommendation |
+|---|---|
+| Runtime | Python (Django) |
+| Auth | Django Built-in Auth (contrib.auth) |
+| Database | Supabase (PostgreSQL) |
+| ORM | Django ORM |
+| File Storage | Supabase Storage or AWS S3 |
+| Email | Resend or SendGrid |
+| Background Jobs | Celery (Redis-backed) |
+| Payment (India) | Stripe SDK (Python) |
+| Payment (International) | Stripe (Python) |
+| AI Pricing Engine | Groq Python SDK (Groq-sonnet-4-20250514) |
+
+### Infrastructure
+| Layer | Recommendation |
+|---|---|
+| Hosting | Vercel (Frontend) + AWS (Backend) + Supabase (Database) |
+| CDN | Cloudflare |
+| Monitoring | Sentry + Posthog |
+| CI/CD | GitHub Actions |
+
+---
+
+## 10. MVP Scope & Out-of-Scope
+
+### ✅ In Scope (MVP)
+
+**Client Payments**
+- AI-powered scope pricing engine (Groq API integration)
+- Admin quote review and override workflow
+- Client quote review screen with revision request
+- Stripe integration (INR — India)
+- Stripe integration (USD/EUR — international)
+- Hard payment gate: all portal features locked until payment confirmed
+- Platform 12% commission calculation and recording
+- Payment status tracking and notifications
+
+**Consultant Subscriptions**
+- 3 subscription plans: Starter (weekly), Professional (monthly), Growth (annual)
+- Stripe + Stripe subscription billing
+- 7-day free trial on signup (no card required)
+- Access gate for expired/lapsed subscriptions
+- Admin subscription status override
+
+**Core Portal Features**
+- Client onboarding wizard (6 steps)
+- Project milestone tracker
+- Consultant profile view + session scheduling (manual calendar)
+- NDA & document signing (typed/drawn signature)
+- In-platform messaging (text + file attachments)
+- Consultant dashboard with stats and earnings
+- Client roster with domain/stage tags
+- Lead submission form + pipeline tracker with referral bonuses
+- Per-client earnings and referral income view
+- KYC checklist with document upload
+
+**Admin Panel**
+- Admin: consultant matching (manual)
+- Admin: client table with assignment status and payment status
+- Admin: consultant directory with KYC and subscription status
+- Admin: KYC approval/rejection queue
+- Admin: revenue view (engagement fees + subscription revenue + payouts)
+- Admin: payout approval and mark-as-paid workflow
+
+### ❌ Out of Scope (Post-MVP)
+
+- AI-assisted consultant matching / recommendation engine
+- Real-time video/audio calling (integrate Zoom/Meet instead)
+- Automated bank transfer / payout disbursement (manual in MVP)
+- Mobile native app (iOS / Android)
+- Multi-language support (Hindi, Turkish)
+- AI chatbot for client onboarding guidance
+- White-label portal for enterprise clients
+- API access for third-party integrations
+- Advanced BI / analytics dashboard
+- Automated referral bonus disbursement
+- Tax invoice generation (GST / VAT)
+- Split / milestone-based payment releases (post-MVP)
+- Coupon / discount codes for subscriptions
+
+---
+
+## 11. Payment & Subscription Implementation Guide
+
+### 11.1 AI Pricing Engine Integration
+
+#### Groq API Configuration (Python)
+
+**Model:** `Groq-sonnet-4-20250514`  
+**Max Tokens:** 2048  
+**Temperature:** 0.3
+
+#### Prompt Template
+
+```python
+def generate_pricing_prompt(onboarding_data):
+    return f"""
+You are CONSSOR's engagement pricing specialist. Analyze this consulting engagement request and provide a pricing recommendation.
+
+INPUT DATA:
+- Industry: {', '.join(onboarding_data['domain_tags'])}
+- Services: {', '.join(onboarding_data['engagement_scope'])}
+- Project Stage: {onboarding_data['project_stage']}
+- Engagement Type: {onboarding_data['engagement_type']}
+- Client Budget Range: {onboarding_data['budget_range']}
+- Country: {onboarding_data['country']}
+- Description: "{onboarding_data['description']}"
+
+PRICING FACTORS:
+1. Industry complexity (Financial Services, Healthcare = premium; Retail, Agriculture = standard)
+2. Multi-scope engagements (2+ services) = +30% base
+3. Project stage: Ideation (1x), Growth (1.5x), M&A/Transaction (2.5x)
+4. Retainer vs One-time: Retainer = sustained delivery pricing
+5. Geographic cost adjustment: India/Turkey = 0.7x, US/Europe = 1.0x
+
+OUTPUT REQUIRED (respond ONLY with valid JSON, no markdown):
+{{
+  "recommended_price_usd": <number>,
+  "price_range_low": <number>,
+  "price_range_high": <number>,
+  "pricing_rationale": "<2-3 sentence explanation>",
+  "estimated_duration_weeks": <number>,
+  "confidence_score": <0.0-1.0>
+}}
+
+Base rates reference:
+- Strategic Consulting: $25K-80K
+- Digital Transformation: $40K-150K
+- Financial Advisory: $30K-100K
+- Technical Consulting: $20K-70K
+- Multi-scope: Sum of individual scopes + 30%
+"""
+
+from groq import Groq
+client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+
+completion = client.chat.completions.create(
+    model="Groq-sonnet-4-20250514",
+    messages=[{"role": "user", "content": generate_pricing_prompt(onboarding_data)}],
+    temperature=0.3,
+    max_tokens=2048,
+    response_format={"type": "json_object"}
+)
+
+import json
+pricing = json.loads(completion.choices[0].message.content)
+```
+
+#### Error Handling
+
+```python
+try:
+    pricing = generate_ai_pricing(onboarding_data)
+    
+    # Validate output
+    if not pricing.get('recommended_price_usd') or pricing['recommended_price_usd'] < 1000:
+        raise ValueError("Invalid pricing output")
+    
+    # Store AI quote in database (Django ORM)
+    EngagementQuote.objects.create(
+        engagement=engagement,
+        ai_recommended_price=pricing['recommended_price_usd'],
+        ai_price_range_low=pricing['price_range_low'],
+        ai_price_range_high=pricing['price_range_high'],
+        ai_rationale=pricing['pricing_rationale'],
+        ai_confidence_score=pricing['confidence_score'],
+        ai_estimated_weeks=pricing['estimated_duration_weeks'],
+        final_price=pricing['recommended_price_usd'], # Admin can override later
+        status='pending_admin'
+    )
+    
+except Exception as e:
+    # Fallback: flag for manual admin pricing
+    EngagementQuote.objects.create(
+        engagement=engagement,
+        status='manual_pricing_required',
+        error_log=str(e)
+    )
+    
+    # Notify admin
+    notify_admin_pricing_failed(engagement.id, str(e))
+```
+
+---
+
+### 11.2 Payment Gateway Integration
+
+#### Stripe Setup (India)
+
+```python
+import stripe
+from django.conf import settings
+
+stripe.api_key = settings.STRIPE_SECRET_KEY
+
+# Create order / Payment Intent
+def create_stripe_payment(engagement, quote):
+    intent = stripe.PaymentIntent.create(
+        amount=int(quote.final_price * 100), # Convert to paise
+        currency='inr',
+        metadata={
+            'engagement_id': str(engagement.id),
+            'client_id': str(engagement.client_id),
+            'consultant_id': str(engagement.consultant_id)
+        }
+    )
+    return {
+        'client_secret': intent.client_secret,
+        'amount': intent.amount,
+        'currency': intent.currency
+    }
+
+# Webhook handler (Django View)
+from django.views.decorators.csrf import csrf_exempt
+from django.http import HttpResponse
+
+@csrf_exempt
+def stripe_webhook(request):
+    payload = request.body
+    sig_header = request.META.get('HTTP_STRIPE_SIGNATURE')
+    endpoint_secret = settings.STRIPE_WEBHOOK_SECRET
+
+    try:
+        event = stripe.Webhook.construct_event(
+            payload, sig_header, endpoint_secret
+        )
+    except Exception as e:
+        return HttpResponse(status=400)
+
+    if event['type'] == 'payment_intent.succeeded':
+        intent = event['data']['object']
+        engagement_id = intent['metadata']['engagement_id']
+        
+        # Update database via Django ORM
+        payment = ClientPayment.objects.get(gateway_payment_id=intent['id'])
+        payment.status = 'paid'
+        payment.paid_at = timezone.now()
+        payment.save()
+        
+        engagement = Engagement.objects.get(id=engagement_id)
+        engagement.payment_status = 'paid'
+        engagement.status = 'active'
+        engagement.save()
+        
+        # Unlock access and notify
+        unlock_client_access(engagement.client_id)
+        send_payment_confirmation_emails(engagement.id)
+
+    return HttpResponse(status=200)
+```
+
+#### Stripe Setup (International)
+
+```python
+# Create checkout session (Django View)
+def create_stripe_checkout(request, engagement_id):
+    engagement = Engagement.objects.get(id=engagement_id)
+    quote = engagement.quote
+    
+    session = stripe.checkout.Session.create(
+        payment_method_types=['card'],
+        line_items=[{
+            'price_data': {
+                'currency': 'usd',
+                'product_data': {
+                    'name': f"CONSSOR Engagement - {', '.join(engagement.scope)}",
+                },
+                'unit_amount': int(quote.final_price * 100),
+            },
+            'quantity': 1,
+        }],
+        mode='payment',
+        success_url=settings.APP_URL + '/client/dashboard?payment=success',
+        cancel_url=settings.APP_URL + '/client/payment?payment=cancelled',
+        metadata={
+            'engagement_id': str(engagement.id),
+        }
+    )
+    return redirect(session.url)
+```
+
+---
+
+### 11.3 Consultant Subscription Billing
+
+#### Plan Configuration (Python)
+
+```python
+SUBSCRIPTION_PLANS = {
+    'starter': {
+        'weekly': {
+            'price_inr': 999,
+            'price_usd': 12,
+            'interval': 'week',
+            'max_clients': 2,
+            'max_leads_per_month': 3,
+            'referral_eligible': False,
+            'features': ['basic_analytics', 'email_support']
+        }
+    },
+    'professional': {
+        'monthly': {
+            'price_inr': 2999,
+            'price_usd': 36,
+            'interval': 'month',
+            'max_clients': 5,
+            'max_leads_per_month': 10,
+            'referral_eligible': True,
+            'features': ['standard_analytics', 'email_support', 'chat_support', 'priority_matching']
+        }
+    },
+    'growth': {
+        'annual': {
+            'price_inr': 24999,
+            'price_usd': 300,
+            'interval': 'year',
+            'max_clients': None, # unlimited
+            'max_leads_per_month': None, # unlimited
+            'referral_eligible': True,
+            'features': [
+                'advanced_analytics',
+                'email_support',
+                'chat_support',
+                'phone_support',
+                'priority_matching',
+                'kyc_fast_track',
+                'account_manager'
+            ]
+        }
+    }
+}
+```
+
+#### Stripe Subscription (Python)
+
+```python
+# Create subscription for consultant
+def create_consultant_subscription(consultant, plan_key):
+    config = SUBSCRIPTION_PLANS[plan_key]
+    
+    # Get or create Stripe customer
+    if not consultant.stripe_customer_id:
+        customer = stripe.Customer.create(
+            email=consultant.email,
+            metadata={'consultant_id': consultant.id}
+        )
+        consultant.stripe_customer_id = customer.id
+        consultant.save()
+    
+    # Create the subscription
+    price_id = settings.STRIPE_PLAN_IDS[plan_key]
+    
+    subscription = stripe.Subscription.create(
+        customer=consultant.stripe_customer_id,
+        items=[{'price': price_id}],
+        metadata={
+            'consultant_id': str(consultant.id),
+            'plan': plan_key
+        }
+    )
+    
+    # Store in database
+    ConsultantSubscription.objects.create(
+        consultant=consultant,
+        plan=plan_key,
+        billing_cycle=config['interval'],
+        price_usd=config['price_usd'],
+        gateway='stripe',
+        gateway_subscription_id=subscription.id,
+        status=subscription.status,
+        current_period_start=timezone.datetime.fromtimestamp(subscription.current_period_start),
+        current_period_end=timezone.datetime.fromtimestamp(subscription.current_period_end)
+    )
+    
+    return subscription
+```
+
+---
+
+### 11.4 Access Control Middleware
+
+#### Client Payment Gate (Django Middleware)
+
+```python
+from django.shortcuts import redirect
+from django.urls import reverse
+
+class ClientPaymentRequiredMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        if request.user.is_authenticated and request.user.role == 'client':
+            # Identify protected paths
+            protected_paths = ['/client/messages', '/client/projects', '/client/consultant', '/client/documents']
+            if any(request.path.startswith(path) for path in protected_paths):
+                # Check for active paid engagement
+                has_paid_engagement = Engagement.objects.filter(
+                    client=request.user,
+                    payment_status='paid'
+                ).exists()
+                
+                if not has_paid_engagement:
+                    return redirect(reverse('client_payment_page'))
+                    
+        return self.get_response(request)
+```
+
+#### Consultant Subscription Gate (Django Middleware)
+
+```python
+class ConsultantSubscriptionMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        if request.user.is_authenticated and request.user.role == 'consultant':
+            # Skip check for subscription and settings pages
+            if request.path.startswith('/consultant/subscription') or request.path.startswith('/consultant/settings'):
+                return self.get_response(request)
+
+            subscription = ConsultantSubscription.objects.filter(consultant=request.user).order_by('-created_at').first()
+            
+            if not subscription or subscription.status in ['expired', 'cancelled']:
+                return redirect(reverse('consultant_subscription_page'))
+            
+            # Handle past_due grace period
+            if subscription.status == 'past_due':
+                grace_period_end = subscription.current_period_end + timedelta(days=3)
+                if timezone.now() > grace_period_end:
+                    subscription.status = 'expired'
+                    subscription.save()
+                    return redirect(reverse('consultant_subscription_page'))
+                    
+        return self.get_response(request)
+```
+
+### 11.5 Revenue Calculations
+
+#### Platform Fee Split (Django ORM)
+
+```python
+from django.db import transaction
+from decimal import Decimal
+
+@transaction.atomic
+def process_payment_revenue(payment):
+    PLATFORM_FEE_PCT = Decimal('0.12')
+    
+    platform_fee = payment.amount * PLATFORM_FEE_PCT
+    consultant_payout = payment.amount - platform_fee
+    
+    payment.platform_fee_pct = PLATFORM_FEE_PCT
+    payment.platform_fee_amount = platform_fee
+    payment.consultant_payout_amount = consultant_payout
+    payment.save()
+    
+    # Create payout record for consultant
+    engagement = payment.engagement
+    
+    Payout.objects.create(
+        consultant=engagement.consultant,
+        period_month=timezone.now().month,
+        period_year=timezone.now().year,
+        gross_earnings=payment.amount,
+        platform_fee_pct=PLATFORM_FEE_PCT,
+        platform_fee_amount=platform_fee,
+        net_payout=consultant_payout,
+        referral_bonus=0, # Updated separately if applicable
+        total_due=consultant_payout,
+        status='pending'
+    )
+```
+
+#### Admin Revenue Dashboard Query (Django ORM)
+
+```python
+from django.db.models import Sum, Count
+from django.utils import timezone
+
+def get_platform_revenue_summary(start_date, end_date):
+    payments = ClientPayment.objects.filter(
+        paid_at__range=(start_date, end_date),
+        status='paid'
+    ).aggregate(
+        total_payments=Sum('amount'),
+        total_fees=Sum('platform_fee_amount'),
+        total_payouts=Sum('consultant_payout_amount')
+    )
+    
+    subscriptions = ConsultantSubscription.objects.filter(
+        current_period_start__range=(start_date, end_date),
+        status__in=['active', 'cancelled']
+    ).aggregate(
+        total_sub_rev=Sum('price_usd'), # Assuming USD for aggregate
+        active_count=Count('id', filter=Q(status='active'))
+    )
+    
+    payout_summary = Payout.objects.filter(
+        created_at__range=(start_date, end_date)
+    ).values('status').annotate(
+        total=Sum('total_due')
+    )
+    
+    # Format payout summary into a dict
+    payouts = {p['status']: p['total'] for p in payout_summary}
+    
+    return {
+        'engagement_revenue': {
+            'total_client_payments': payments['total_payments'] or 0,
+            'total_platform_fees': payments['total_fees'] or 0,
+            'total_consultant_payouts': payments['total_payouts'] or 0
+        },
+        'subscription_revenue': {
+            'total_subscription_revenue': subscriptions['total_sub_rev'] or 0,
+            'active_subscriptions': subscriptions['active_count']
+        },
+        'payouts': {
+            'pending': payouts.get('pending', 0),
+            'approved': payouts.get('approved', 0),
+            'paid': payouts.get('paid', 0)
+        }
+    }
+```
+
+---
+
+### 11.6 Email Notifications
+
+#### Payment Confirmation Templates (Django)
+
+```python
+from django.core.mail import send_mail
+from django.template.loader import render_to_string
+
+def send_client_payment_confirmation(engagement, payment):
+    context = {
+        'client_name': engagement.client.contact_name,
+        'engagement_title': engagement.title,
+        'amount_paid': f"${payment.amount}",
+        'consultant_name': engagement.consultant.full_name,
+        'dashboard_url': settings.APP_URL + '/client/dashboard'
+    }
+    html_message = render_to_string('emails/client_payment_confirmation.html', context)
+    
+    send_mail(
+        subject='Payment Confirmed - Your CONSSOR Engagement is Active',
+        message='Payment confirmed. View your dashboard for details.',
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[engagement.client.email],
+        html_message=html_message
+    )
+
+def send_consultant_engagement_notification(engagement, payment):
+    context = {
+        'consultant_name': engagement.consultant.full_name,
+        'client_name': engagement.client.organization_name,
+        'engagement_scope': ', '.join(engagement.scope),
+        'your_payout': f"${payment.consultant_payout_amount}",
+        'client_profile_url': f"{settings.APP_URL}/consultant/clients/{engagement.client_id}"
+    }
+    html_message = render_to_string('emails/consultant_engagement_notification.html', context)
+    
+    send_mail(
+        subject='New Client Engagement Assigned',
+        message='A new client has been assigned to you.',
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[engagement.consultant.email],
+        html_message=html_message
+    )
+```
+
+
+---
+
+## Appendix: CONSSOR Brand Reference
+
+**Primary Color:** Deep navy / dark teal (from website)  
+**Accent Color:** Bright highlight (CTA buttons)  
+**Typography:** Clean sans-serif (Inter / DM Sans recommended)  
+**Office Locations:**
+- India: Fifty Two, Binanagar, Vadodara-390007, Gujarat · +91 6353 498 016
+- Turkey: Kızılırmak Mah., The Paragon Kat:23, Çankaya/Ankara · +90 312 258 63 46
+
+**Contacts:** info@conssor.com · careers@conssor.com  
+**Website:** conssor.com
+
+---
+
+
+
+---
+
+## 12. Demo & Testing Guide
+
+### 12.1 Demo Credentials
+
+**Default Password for ALL Demo Accounts:** `Demo@2024`
+
+#### Admin Account
+| Email | Role | Access |
+|-------|------|--------|
+| admin@conssor.com | Administrator | Full platform control, all features |
+
+#### Client Accounts (Industry-Specific)
+| Email | Name | Industry | Company |
+|-------|------|----------|---------|
+| client@healthcare.com | Sarah Chen | Healthcare & Life Sciences | MedTech Solutions |
+| client@finance.com | Michael Roberts | Financial Services | Capital Ventures |
+| client@manufacturing.com | David Martinez | Industrial & Manufacturing | Industrial Systems Inc |
+| client@technology.com | Emily Johnson | Digital Economy & ICT | TechForward Corp |
+| client@energy.com | Robert Williams | Energy & Utilities | GreenPower Ltd |
+
+#### Consultant Accounts
+| Email | Name | Domain Expertise |
+|-------|------|-----------|
+| consultant@healthcare.com | Dr. James Wilson | Healthcare & Life Sciences |
+| consultant@finance.com | Alexandra Reed | Financial Services |
+| consultant@strategy.com | Mark Thompson | Strategic Consulting & Digital Economy |
+| consultant@operations.com | Lisa Anderson | Technical Consulting & Operations |
+
+---
+
+### 12.2 Demo Data Setup
+
+#### Pre-seeded Engagements
+
+**Active Engagement 1**
+- Client: Sarah Chen (client@healthcare.com)
+- Consultant: Dr. James Wilson (consultant@healthcare.com)
+- Project: "Digital Health Transformation"
+- Scope: Digital Transformation + Strategic Consulting
+- Stage: Growth / Scaling
+- Payment: $75,000 (paid)
+- Milestones: 
+  - Kick-off Call (Completed)
+  - Requirements Analysis (In Progress)
+  - Implementation Roadmap (Not Started)
+  - Final Delivery (Not Started)
+
+**Active Engagement 2**
+- Client: Michael Roberts (client@finance.com)
+- Consultant: Alexandra Reed (consultant@finance.com)
+- Project: "FinTech Platform Strategy"
+- Scope: Strategic Consulting + Financial Advisory
+- Stage: Validation / Research
+- Payment: $48,000 (paid)
+- Milestones:
+  - Market Analysis (Completed)
+  - Competitor Benchmarking (In Progress)
+  - Strategic Recommendations (Not Started)
+
+**Pending Quote**
+- Client: Emily Johnson (client@technology.com)
+- Unassigned
+- AI Quote: $62,000
+- Status: Awaiting admin approval
+- Description: "Cloud migration strategy for legacy systems"
+
+#### Pre-seeded Leads
+
+| Lead | Submitted By | Organization | Domain | Stage | Est. Value |
+|------|--------------|--------------|--------|-------|------------|
+| E-commerce Platform Optimization | Mark Thompson | RetailCo | Consumer & Retail | proposal_sent | $35,000 |
+| Supply Chain AI Integration | Lisa Anderson | LogiTech | Transportation & Logistics | under_review | $95,000 |
+| Renewable Energy Expansion | Mark Thompson | SolarWorks | Energy & Utilities | contacted | $120,000 |
+
+#### Pre-seeded Invoices & Payouts
+
+**Invoice 1 (Paid)**
+- Client: Sarah Chen
+- Engagement: Digital Health Transformation
+- Amount: $75,000
+- Platform Fee (12%): $9,000
+- Consultant Payout: $66,000
+- Status: Paid
+- Date: 30 days ago
+
+**Invoice 2 (Pending)**
+- Client: Michael Roberts
+- Engagement: FinTech Platform Strategy
+- Amount: $48,000
+- Platform Fee (12%): $5,760
+- Consultant Payout: $42,240
+- Status: Pending
+- Due: 15 days from now
+
+**Consultant Subscriptions**
+- Dr. James Wilson: Growth Plan (Annual) - Active
+- Alexandra Reed: Professional Plan (Monthly) - Active
+- Mark Thompson: Professional Plan (Monthly) - Active
+- Lisa Anderson: Starter Plan (Weekly) - Active
+
+---
+
+### 12.3 Demo User Journeys
+
+#### Journey 1: New Client Onboarding & Payment
+
+**Duration:** 5 minutes
+
+1. **Landing Page Interaction**
+   - Visit homepage as unauthenticated user
+   - Interact with AI chat: "I need help with digital transformation in healthcare"
+   - AI classifies need → Healthcare & Life Sciences + Digital Transformation
+   - AI provides consulting-style response with recommendations
+   - Click "Get Started" CTA
+
+2. **Registration & Onboarding**
+   - Register new client account
+   - Complete 6-step onboarding wizard:
+     - Step 1: Account details
+     - Step 2: Select domains (Healthcare, Digital Economy)
+     - Step 3: Select scope (Digital Transformation, Strategic Consulting)
+     - Step 4: Choose stage (Growth / Scaling)
+     - Step 5: Set budget ($50K-$200K)
+     - Step 6: Review & submit
+
+3. **AI Quote Generation**
+   - System triggers Groq API pricing engine
+   - AI analyzes scope and returns $85,000 quote
+   - Admin receives notification (auto-approve in demo)
+   - Client sees quote on dashboard
+
+4. **Payment Flow**
+   - Client reviews quote breakdown
+   - Clicks "Pay & Unlock Engagement"
+   - Redirected to Stripe/Stripe checkout (test mode)
+   - Completes payment
+   - Engagement activated, portal unlocked
+
+5. **Post-Payment Access**
+   - Client dashboard now shows active engagement
+   - Messaging thread unlocked
+   - Project tracker with milestones visible
+   - NDA ready for signing
+   - Consultant profile + scheduling available
+
+---
+
+#### Journey 2: Consultant Lead Submission & Conversion
+
+**Duration:** 4 minutes
+
+1. **Login as Consultant**
+   - Login: consultant@strategy.com / Demo@2024
+   - Dashboard shows: 2 active clients, 3 leads submitted, $8,500 earnings
+
+2. **Submit New Lead**
+   - Navigate to Leads → Click "Add Lead"
+   - Fill form:
+     - Lead Name: "TechCorp Cloud Migration"
+     - Contact Email: leads@techcorp.com
+     - Industry: Digital Economy & ICT
+     - Estimated Value: $55,000
+     - Engagement Type: One-time
+     - Description: "Migrate on-premise infrastructure to AWS"
+     - Source: Conference
+   - Submit lead
+
+3. **View Lead Pipeline**
+   - New lead appears in "Submitted" stage
+   - Can track progress through stages
+   - Referral bonus shown: $2,750 (5% of $55,000)
+
+4. **Admin Converts Lead** (switch to admin account)
+   - Login as admin@conssor.com
+   - Go to Lead Management
+   - Find "TechCorp Cloud Migration" lead
+   - Assign consultant (Mark Thompson)
+   - Click "Convert to Project"
+   - System creates engagement, triggers AI pricing
+
+5. **Consultant Sees Update**
+   - Switch back to consultant account
+   - Lead status → "Won"
+   - Referral bonus → "Pending" (awaiting client payment)
+   - New client appears in Client Roster
+
+---
+
+#### Journey 3: Admin Platform Management
+
+**Duration:** 6 minutes
+
+1. **Platform Overview**
+   - Login as admin@conssor.com
+   - View dashboard stats:
+     - Total Users: 9 (1 admin, 5 clients, 4 consultants... actually 4 consultants in demo)
+     - Active Leads: 4
+     - Active Projects: 2
+     - Pending Invoices: 1
+     - Total Revenue: $123,000
+
+2. **Manage Pending Quote**
+   - Navigate to Quotes (Admin Panel)
+   - See Emily Johnson's quote: $62,000 (AI-generated)
+   - Review AI rationale
+   - Adjust to $58,000 (override)
+   - Add note: "Adjusted for competitive positioning"
+   - Approve quote
+   - Client notified via email
+
+3. **Assign Consultant to Client**
+   - Navigate to Consultant Matching
+   - See unassigned client (Emily Johnson)
+   - View consultant pool filtered by domain (Digital Economy)
+   - Select Lisa Anderson (Technical Consulting expertise)
+   - Click "Assign"
+   - Confirmation modal → Confirm
+   - Both parties notified
+
+4. **KYC Review**
+   - Navigate to KYC Approval Queue
+   - See pending document: Mark Thompson - PAN Card
+   - View document preview
+   - Click "Approve"
+   - KYC status updated to Verified
+   - Consultant notified
+
+5. **Revenue & Payout Management**
+   - Navigate to Platform Revenue
+   - View summary:
+     - Total Client Payments: $123,000
+     - Platform Fees (12%): $14,760
+     - Consultant Payouts: $108,240
+     - Subscription Revenue: ₹30,996 (~$372)
+   - Review Consultant Payout Table
+   - Find Dr. James Wilson - $66,000 net payout (Pending)
+   - Click "Approve Payout"
+   - Confirmation modal with breakdown
+   - Approve
+   - Status → "Approved"
+   - External bank transfer processed (offline)
+   - Click "Mark as Paid"
+   - Status → "Paid"
+   - Consultant receives confirmation email
+
+6. **Subscription Management**
+   - Navigate to Subscriptions
+   - View all consultant subscriptions
+   - See Lisa Anderson on Starter (Weekly)
+   - Note: Approaching client limit (2/2 active)
+   - Send upgrade suggestion (manual email in MVP)
+
+---
+
+### 12.4 Testing Scenarios
+
+#### Test Case 1: Payment Access Gate
+
+**Objective:** Verify hard gate blocks client until payment
+
+**Steps:**
+1. Create new client account
+2. Complete onboarding wizard
+3. Quote generated and approved by admin
+4. Attempt to access /client/messages → Should redirect to /client/payment
+5. Attempt to access /client/projects → Should redirect to /client/payment
+6. Attempt to access /client/consultant/123 → Should redirect to /client/payment
+7. Attempt to access /client/documents → Should redirect to /client/payment
+8. Complete payment
+9. Verify all routes now accessible
+
+**Expected Result:** Access denied until payment_status = 'paid'
+
+---
+
+#### Test Case 2: AI Pricing Engine
+
+**Objective:** Validate AI generates reasonable quotes
+
+**Test Data:**
+| Domain | Scope | Stage | Budget | Expected Range |
+|--------|-------|-------|--------|----------------|
+| Financial Services | Strategic Consulting | M&A | $200K+ | $80K-$150K |
+| Retail | Digital Transformation | Ideation | $10K-$50K | $18K-$35K |
+| Healthcare | Multi-scope (3 services) | Growth | $50K-$200K | $70K-$120K |
+
+**Steps:**
+1. Submit onboarding with test data
+2. Capture AI pricing output
+3. Verify price falls within expected range
+4. Verify confidence score > 0.6
+5. Verify rationale is coherent (manual review)
+
+**Expected Result:** All quotes within ±15% of expected range
+
+---
+
+#### Test Case 3: Consultant Subscription Limits
+
+**Objective:** Enforce plan limits
+
+**Steps:**
+1. Login as consultant on Starter plan (2 client limit)
+2. Verify 2 active clients already assigned
+3. Admin attempts to assign 3rd client
+4. System returns error: "Client limit reached"
+5. Consultant upgrades to Professional plan
+6. Admin re-attempts assignment
+7. Assignment succeeds (new limit: 5 clients)
+
+**Expected Result:** Hard limit enforced, upgrade unlocks capacity
+
+---
+
+#### Test Case 4: Platform Fee Calculation
+
+**Objective:** Verify 12% commission accuracy
+
+**Test Data:**
+| Client Payment | Expected Platform Fee | Expected Consultant Payout |
+|----------------|----------------------|---------------------------|
+| $48,000 | $5,760 (12%) | $42,240 (88%) |
+| $100,000 | $12,000 | $88,000 |
+| $27,500 | $3,300 | $24,200 |
+
+**Steps:**
+1. Create invoice with test amount
+2. Mark as paid
+3. Verify `platform_fee_amount` calculated correctly
+4. Verify `consultant_payout_amount` = amount - platform_fee
+5. Verify payout record created with correct net amount
+
+**Expected Result:** Fee math accurate to 2 decimal places
+
+---
+
+#### Test Case 5: Subscription Expiry & Grace Period
+
+**Objective:** Validate grace period and access lock
+
+**Steps:**
+1. Create consultant subscription (Weekly plan)
+2. Set `current_period_end` to 5 days ago
+3. Trigger payment failure webhook
+4. Subscription status → `past_due`
+5. Verify consultant can still access platform (within 3-day grace)
+6. Set `current_period_end` to 8 days ago (past grace period)
+7. Consultant attempts to access /consultant/clients
+8. System returns 403: "Subscription expired"
+9. Consultant renews subscription
+10. Access restored
+
+**Expected Result:** 3-day grace period enforced, hard lock after expiry
+
+---
+
+### 12.5 Video Demo Script
+
+#### Part 1: Platform Introduction (1 min)
+- Show landing page with split-screen layout
+- Highlight CONSSOR branding (navy + gold theme)
+- Demonstrate AI chat interaction on homepage
+- Show hamburger menu navigation (Services, Industries, Case Studies)
+- Demo resizable chat panel (drag divider)
+- Toggle chat hide/show button
+
+#### Part 2: Client Experience (2 min)
+- **Login:** client@healthcare.com / Demo@2024
+- **Dashboard:** Show overview with stats
+  - Active Projects: 1
+  - Pending Invoices: $0
+  - Amount Due: $0
+- **Projects:** Navigate to "Digital Health Transformation"
+  - View milestones with progress
+  - Show completed vs. in-progress vs. not-started badges
+- **Consultant Profile:** View Dr. James Wilson's profile
+  - Bio, expertise, years of experience
+  - Schedule session (calendar view)
+- **Documents:** View signed NDA
+  - Download PDF
+- **Finance:** Show $75,000 paid invoice
+  - Platform assurance message displayed
+- **AI Chat:** Ask "What's the status of my project?"
+  - AI responds with milestone summary
+
+#### Part 3: Consultant Experience (2 min)
+- **Login:** consultant@strategy.com / Demo@2024
+- **Dashboard:** Show stats
+  - New Leads: 1
+  - Active Projects: 2
+  - Total Leads: 3
+  - Earnings: $8,500
+- **Leads:** 
+  - View Recent Leads table
+  - Click "Add Lead" → Fill form
+  - Submit new lead "TechCorp Cloud Migration"
+- **Pipeline Tracker:** Show kanban view
+  - Leads in Submitted, Under Review, Contacted, Proposal Sent
+  - Referral bonus amounts displayed
+- **Earnings:** View per-client breakdown
+  - Client 1: $66,000 payout (Paid)
+  - Client 2: $42,240 payout (Pending)
+  - Referral bonuses: $0 (none converted yet)
+- **Documents:** Generate Scope of Work
+  - AI fills in engagement details
+  - Download PDF
+
+#### Part 4: Admin Experience (2 min)
+- **Login:** admin@conssor.com / Demo@2024
+- **Dashboard:** Platform-wide statistics
+  - Total Users: 9
+  - Active Leads: 4
+  - Active Projects: 2
+  - Total Revenue: $123,000
+- **Quote Approval:** 
+  - Review Emily Johnson's $62,000 AI quote
+  - Override to $58,000
+  - Add adjustment note
+  - Approve
+- **Consultant Matching:**
+  - See unassigned client (Emily)
+  - Filter consultants by domain
+  - Assign Lisa Anderson
+  - Confirm assignment
+- **KYC Queue:**
+  - Review Mark Thompson's PAN Card
+  - Approve document
+- **Revenue Dashboard:**
+  - Total Client Payments: $123,000
+  - Platform Fees: $14,760
+  - Consultant Payouts: $108,240
+  - Subscription Revenue: ₹30,996
+  - Approve Dr. Wilson's $66,000 payout
+  - Mark as paid
+
+#### Part 5: Advanced Features (1 min)
+- **AI Chat Everywhere:** Show chat panel on all dashboards
+- **Resizable Layout:** Drag divider to resize chat
+- **Mobile Responsive:** Shrink browser to show mobile view
+- **Premium Design:** Highlight navy header, gold accents, clean typography
+- **Real-time Updates:** Show notification badges (mocked for demo)
+
+---
+
+### 12.6 API Endpoint Reference (Demo Mode)
+
+All endpoints return mocked data in demo mode. No actual database writes occur unless explicitly enabled.
+
+#### Authentication
+```
+POST   /api/auth/register        - Register new user
+POST   /api/auth/login           - Login (demo accounts)
+POST   /api/auth/logout          - Logout
+GET    /api/auth/me              - Get current user
+```
+
+#### AI Chat
+```
+POST   /api/chat                 - Send message to AI (Groq API)
+GET    /api/chat/history/{id}    - Get chat history
+```
+
+#### Leads
+```
+GET    /api/leads                - List leads (filtered by role)
+POST   /api/leads                - Create lead (consultant only)
+PATCH  /api/leads/{id}           - Update lead
+PATCH  /api/leads/{id}/assign    - Assign consultant (admin only)
+POST   /api/leads/{id}/convert   - Convert to project (admin only)
+```
+
+#### Projects
+```
+GET    /api/projects             - List projects
+POST   /api/projects             - Create project (admin only)
+GET    /api/projects/{id}        - Get project details
+PATCH  /api/projects/{id}        - Update project
+```
+
+#### Quotes & Payments
+```
+POST   /api/quotes/generate      - Trigger AI pricing
+PATCH  /api/quotes/{id}/approve  - Admin approve/override quote
+POST   /api/payments/stripe/create - Create Stripe checkout
+POST   /webhooks/stripe          - Payment webhook
+```
+
+#### Documents
+```
+POST   /api/documents/scope      - Generate Scope of Work (AI)
+POST   /api/documents/nda        - Generate NDA (template)
+GET    /api/documents/{id}       - Download document
+```
+
+#### Finance
+```
+GET    /api/invoices             - List invoices
+POST   /api/invoices             - Create invoice (admin only)
+GET    /api/commissions          - List commissions (consultant view)
+GET    /api/payouts              - List payouts (consultant view)
+PATCH  /api/payouts/{id}/approve - Approve payout (admin only)
+PATCH  /api/payouts/{id}/paid    - Mark as paid (admin only)
+```
+
+#### Subscriptions
+```
+GET    /api/subscriptions        - Get current subscription
+POST   /api/subscriptions        - Create subscription
+PATCH  /api/subscriptions/{id}   - Update/cancel subscription
+POST   /webhooks/stripe-subs     - Subscription webhook
+```
+
+#### Admin
+```
+GET    /api/admin/stats          - Platform statistics
+GET    /api/admin/users          - List all users
+GET    /api/admin/revenue        - Revenue dashboard data
+GET    /api/admin/kyc            - KYC approval queue
+PATCH  /api/admin/kyc/{id}       - Approve/reject KYC
+```
+
+---
+
+### 12.7 Environment Setup for Demo
+
+#### Frontend (.env)
+```bash
+VITE_API_URL=http://localhost:8000
+VITE_DEMO_MODE=true
+VITE_STRIPE_PUBLISHABLE_KEY=pk_test_...
+VITE_Stripe_KEY_ID=rzp_test_...
+```
+
+#### Backend (.env)
+```bash
+# Demo Mode
+DEMO_MODE=true
+SEED_DEMO_DATA=true
+
+# AI
+GROQ_API_KEY=sk-ant-...
+
+# Payments (Test Mode)
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+
+# Database (Supabase)
+DATABASE_URL=postgresql://...
+
+# Redis (Background Jobs)
+REDIS_URL=redis://...
+
+# Auth (Django)
+SECRET_KEY=demo-secret-key-do-not-use-in-production
+```
+
+#### Demo Data Seeding Script
+
+```bash
+# Seed demo accounts and data
+npm run seed:demo
+
+# Or with Python
+python scripts/seed_demo.py
+
+# Includes:
+# - 1 admin, 5 clients, 4 consultants
+# - 2 active engagements with milestones
+# - 3 leads in various pipeline stages
+# - 2 invoices (1 paid, 1 pending)
+# - 4 consultant subscriptions
+# - Sample documents, chat history
+```
+
+
+---
+
+## Quick Reference Card
+
+### API Endpoints Summary
+
+```
+POST   /api/pricing/generate          - Trigger AI pricing for engagement
+POST   /api/quotes/:id/approve         - Admin approves/overrides quote
+POST   /api/payments/stripe/create     - Create Stripe checkout session
+POST   /webhooks/stripe                - Payment confirmation webhook
+POST   /webhooks/stripe-subs           - Subscription status updates
+POST   /api/subscriptions/create       - Create consultant subscription
+GET    /api/admin/revenue              - Platform revenue summary
+POST   /api/admin/payouts/:id/approve  - Approve consultant payout
+POST   /api/admin/payouts/:id/mark-paid - Mark payout as disbursed
+```
+
+### Environment Variables Required
+
+```bash
+# Groq AI
+GROQ_API_KEY=sk-ant-...
+
+# Stripe
+STRIPE_SECRET_KEY=sk_live_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+STRIPE_PUBLISHABLE_KEY=pk_live_...
+
+# Supabase (Database)
+DATABASE_URL=postgresql://postgres:[PASSWORD]@db.[REF].supabase.co:5432/postgres
+
+# Redis (Background Jobs)
+REDIS_URL=redis://:[PASSWORD]@[HOST]:[PORT]
+
+# AWS (Backend Hosting)
+AWS_ACCESS_KEY_ID=...
+AWS_SECRET_ACCESS_KEY=...
+AWS_REGION=...
+
+# App
+APP_URL=https://app.conssor.com
+PLATFORM_FEE_PERCENT=0.12
+```
+
+### Database Indexes (Performance)
+
+```sql
+-- High-traffic queries
+CREATE INDEX idx_engagement_client ON engagement(client_id);
+CREATE INDEX idx_engagement_consultant ON engagement(consultant_id);
+CREATE INDEX idx_engagement_payment_status ON engagement(payment_status);
+CREATE INDEX idx_payment_status ON client_payment(status);
+CREATE INDEX idx_subscription_consultant ON consultant_subscription(consultant_id);
+CREATE INDEX idx_subscription_status ON consultant_subscription(status);
+CREATE INDEX idx_payout_consultant ON payout(consultant_id);
+CREATE INDEX idx_payout_status ON payout(status);
+```
+
+### Key Business Logic Rules
+
+1. **Payment is mandatory before portal access** — No exceptions; hard-coded gate in middleware
+2. **12% platform fee is non-negotiable** — Admin can override per-engagement if needed, but default is locked
+3. **AI pricing confidence < 0.6** → Flag for manual admin review before sending to client
+4. **Subscription grace period = 3 days** after payment failure before access lock
+5. **KYC must be 100% verified** before consultant can receive payouts
+6. **Referral bonus eligibility** → Only Professional and Growth plan consultants
+7. **Free trial = 7 days** → Max 1 active client, max 2 lead submissions during trial
+
+### Support Contacts
+
+- **Technical Issues:** info@conssor.com
+- **Payment/Billing:** accounts@conssor.com
+- **Consultant Support:** careers@conssor.com
+- **Admin Emergency:** +91 6353 498 016 (India) · +90 312 258 63 46 (Turkey)
+
+
+*Document prepared for CONSSOR internal product development. All specifications subject to change based on stakeholder review.*
