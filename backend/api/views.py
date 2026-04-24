@@ -337,21 +337,35 @@ def client_engagements(_request, client_id):
     for e in engagements:
         consultant_info = None
         if e.consultant:
-            c = e.consultant
             consultant_info = {
-                "full_name": c.full_name,
-                "email": c.email,
-                "bio": c.bio,
-                "years_experience": c.years_experience,
-                "domain_expertise": c.domain_expertise,
-                "rating": c.rating,
-                "linkedin_url": c.linkedin_url,
+                "full_name": e.consultant.full_name,
+                "email": e.consultant.email,
             }
+            
+        # Financial stats
+        try:
+            quote = EngagementQuote.objects.filter(engagement=e).latest('created_at')
+            total_price = float(quote.final_price)
+        except EngagementQuote.DoesNotExist:
+            total_price = 0
+            
+        payments = ClientPayment.objects.filter(engagement=e, status='paid')
+        paid_amount = sum(float(p.amount) for p in payments)
+        first_p = payments.first()
+        
         data.append({
             "id": str(e.id),
             "scope": e.scope,
             "stage": e.stage,
             "status": e.status,
+            "payment_status": e.payment_status,
+            "financials": {
+                "total_price": total_price,
+                "paid_amount": paid_amount,
+                "remaining_amount": total_price - paid_amount,
+                "paid_count": payments.count(),
+                "total_parts": first_p.total_installments if first_p else 1,
+            },
             "start_date": str(e.start_date),
             "end_date": str(e.end_date) if e.end_date else None,
             "consultant": consultant_info,
@@ -366,3 +380,152 @@ def client_engagements(_request, client_id):
         })
 
     return Response({"engagements": data})
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def engagement_detail(_request, engagement_id):
+    try:
+        e = Engagement.objects.select_related('consultant', 'client').prefetch_related('milestones').get(id=engagement_id)
+    except (Engagement.DoesNotExist, ValueError):
+        return Response({"error": "Engagement not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    consultant_info = None
+    if e.consultant:
+        c = e.consultant
+        consultant_info = {
+            "full_name": c.full_name,
+            "email": c.email,
+            "bio": c.bio,
+            "years_experience": c.years_experience,
+            "domain_expertise": c.domain_expertise,
+            "rating": c.rating,
+            "linkedin_url": c.linkedin_url,
+        }
+
+    return Response({
+        "engagement": {
+            "id": str(e.id),
+            "scope": e.scope,
+            "stage": e.stage,
+            "status": e.status,
+            "payment_status": e.payment_status,
+            "start_date": str(e.start_date),
+            "end_date": str(e.end_date) if e.end_date else None,
+            "consultant": consultant_info,
+            "client": {
+                "organization_name": e.client.organization_name,
+                "project_summary": e.client.project_summary,
+                "domain_tags": e.client.domain_tags,
+            },
+            "milestones": [{
+                "id": str(m.id),
+                "name": m.name,
+                "due_date": str(m.due_date),
+                "status": m.status,
+                "owner": m.owner,
+                "notes": m.notes,
+            } for m in e.milestones.all().order_by('due_date')],
+        }
+    })
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def process_payment(request):
+    engagement_id = request.data.get('engagement_id')
+    installments = int(request.data.get('installments', 1))
+    action = request.data.get('action', 'initial') # initial, next, settle
+    
+    try:
+        engagement = Engagement.objects.get(id=engagement_id)
+        quote = EngagementQuote.objects.filter(engagement=engagement).latest('created_at')
+    except (Engagement.DoesNotExist, EngagementQuote.DoesNotExist):
+        return Response({"error": "Engagement or active quote not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    total_amount = float(quote.final_price)
+    
+    # Calculate how many installments exist
+    existing_payments = ClientPayment.objects.filter(engagement=engagement, status='paid').count()
+    
+    if action == 'initial':
+        installment_amount = total_amount / installments
+        current_installment = 1
+        total_parts = installments
+    elif action == 'next':
+        # Find the installment setup from the first payment
+        first_payment = ClientPayment.objects.filter(engagement=engagement, status='paid').first()
+        if not first_payment:
+            return Response({"error": "No initial payment found."}, status=status.HTTP_400_BAD_REQUEST)
+        total_parts = first_payment.total_installments
+        installment_amount = total_amount / total_parts
+        current_installment = existing_payments + 1
+    elif action == 'settle':
+        first_payment = ClientPayment.objects.filter(engagement=engagement, status='paid').first()
+        if not first_payment:
+            return Response({"error": "No initial payment found."}, status=status.HTTP_400_BAD_REQUEST)
+        total_parts = first_payment.total_installments
+        already_paid = (total_amount / total_parts) * existing_payments
+        installment_amount = total_amount - already_paid
+        current_installment = total_parts # Mark as reaching the end
+    else:
+        return Response({"error": "Invalid action."}, status=status.HTTP_400_BAD_REQUEST)
+
+    import uuid
+    payment = ClientPayment.objects.create(
+        engagement=engagement,
+        client=engagement.client,
+        quote=quote,
+        amount=installment_amount,
+        currency='USD',
+        gateway='Simulation',
+        gateway_payment_id=f"SIM_{uuid.uuid4().hex[:10]}",
+        installment_number=current_installment,
+        total_installments=total_parts if action != 'settle' else first_payment.total_installments,
+        platform_fee_pct=0.12,
+        platform_fee_amount=installment_amount * 0.12,
+        consultant_payout_amount=installment_amount * 0.88,
+        status='paid',
+        paid_at=timezone.now()
+    )
+    
+    # Final status update
+    total_paid_count = ClientPayment.objects.filter(engagement=engagement, status='paid').count()
+    first_p = ClientPayment.objects.filter(engagement=engagement, status='paid').first()
+    
+    if action == 'settle' or (first_p and total_paid_count >= first_p.total_installments):
+        engagement.payment_status = 'paid'
+    else:
+        engagement.payment_status = 'partially_paid'
+    
+    engagement.save()
+    
+    return Response({
+        "success": True,
+        "message": f"Payment of ${installment_amount:,.2f} processed. Current status: {engagement.payment_status}",
+        "payment_status": engagement.payment_status
+    })
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def client_payments(_request, client_id):
+    try:
+        client = Client.objects.get(id=client_id)
+    except Client.DoesNotExist:
+        return Response({"error": "Client not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    payments = ClientPayment.objects.filter(client=client).select_related('engagement', 'quote').order_by('-paid_at')
+
+    return Response({
+        "payments": [{
+            "id": str(p.id),
+            "engagement_scope": p.engagement.scope,
+            "amount": float(p.amount),
+            "currency": p.currency,
+            "installment": f"{p.installment_number}/{p.total_installments}",
+            "status": p.status,
+            "paid_at": p.paid_at.strftime("%Y-%m-%d %H:%M") if p.paid_at else None,
+            "gateway_payment_id": p.gateway_payment_id,
+        } for p in payments]
+    })

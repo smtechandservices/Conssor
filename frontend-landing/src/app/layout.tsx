@@ -13,8 +13,13 @@ const montserrat = Montserrat({
 });
 
 export const metadata: Metadata = {
-  title: "CONSSOR - Transformative Consulting",
-  description: "Collaborative Intelligence Consulting Platform",
+  title: "CONSSOR | Strategic Intelligence & Collaborative Advisory",
+  description: "Connect with world-class domain experts through CONSSOR, the premium consulting marketplace powered by AI engagement pricing.",
+  icons: {
+    icon: "/assets/logo-bird.png",
+    shortcut: "/assets/logo-bird.png",
+    apple: "/assets/logo-bird.png",
+  }
 };
 
 export default function RootLayout({

@@ -60,6 +60,14 @@ export interface Engagement {
   scope: string[];
   stage: string;
   status: string;
+  payment_status: "unpaid" | "partially_paid" | "paid";
+  financials: {
+    total_price: number;
+    paid_amount: number;
+    remaining_amount: number;
+    paid_count: number;
+    total_parts: number;
+  };
   start_date: string;
   end_date: string | null;
   consultant: Consultant | null;

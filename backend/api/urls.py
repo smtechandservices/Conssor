@@ -9,4 +9,6 @@ urlpatterns = [
     path('client/<uuid:client_id>/overview/', views.client_overview, name='client_overview'),
     path('client/<uuid:client_id>/quotes/', views.client_quotes, name='client_quotes'),
     path('client/<uuid:client_id>/engagements/', views.client_engagements, name='client_engagements'),
+    path('client/<uuid:client_id>/payments/', views.client_payments, name='client_payments'),
+    path('payments/process/', views.process_payment, name='process_payment'),
 ]

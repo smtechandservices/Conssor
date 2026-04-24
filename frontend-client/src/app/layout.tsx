@@ -11,8 +11,13 @@ const notoSerif = Noto_Serif({
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 export const metadata: Metadata = {
-  title: "CONSSOR - Transformative Consulting",
-  description: "Collaborative Intelligence Consulting Platform",
+  title: "Client Portal | CONSSOR Advisory",
+  description: "Manage your strategic engagements, review AI-generated quotes, and collaborate with world-class experts on the CONSSOR platform.",
+  icons: {
+    icon: "/assets/logo-bird.png",
+    shortcut: "/assets/logo-bird.png",
+    apple: "/assets/logo-bird.png",
+  }
 };
 
 export default function RootLayout({

@@ -48,8 +48,8 @@ export default function PortalShell({ children, heading, badge }: Props) {
       {/* Sidebar */}
       <aside className="w-64 bg-secondary/30 border-r border-white/5 hidden md:flex flex-col shrink-0 print:hidden">
         <div className="p-8 border-b border-white/5">
-          <div className="text-primary tracking-widest text-sm uppercase font-semibold">CONSSOR</div>
-          <div className="text-[10px] text-muted-foreground mt-1 tracking-wider uppercase">Client Portal</div>
+          <img src="/assets/logo-combined.png" alt="CONSSOR" className="h-8 w-auto mb-2 opacity-90" />
+          <div className="text-[10px] text-muted-foreground mt-1 tracking-widest uppercase">Client Portal</div>
         </div>
 
         <nav className="flex-1 py-6 px-4 space-y-1 text-sm">

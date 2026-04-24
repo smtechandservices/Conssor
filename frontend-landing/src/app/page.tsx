@@ -181,7 +181,7 @@ export default function LandingPage() {
           <header className="mb-16">
             <div className="mb-6">
               <img
-                src="https://customer-assets.emergentagent.com/job_c13d24bf-1e73-40e8-af88-f21bcf07446a/artifacts/xr9oswxa_g.png"
+                src="/assets/logo-combined.png"
                 alt="CONSSOR"
                 className="h-8 w-auto"
               />
@@ -236,6 +236,22 @@ export default function LandingPage() {
               </div>
             </div>
           </section>
+
+          <section className="mt-16 space-y-8">
+            <h3 className="font-heading text-2xl tracking-tight font-medium">World-Class Environments.</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="aspect-[4/3] relative overflow-hidden rounded-sm border border-white/10 group">
+                <img src="/assets/img-corporate.jpg" alt="Corporate" className="object-cover w-full h-full transition-transform duration-700 group-hover:scale-110" />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#0B1C2C] to-transparent opacity-60" />
+                <div className="absolute bottom-4 left-4 text-[10px] uppercase tracking-widest text-white/80">Global Infrastructure</div>
+              </div>
+              <div className="aspect-[4/3] relative overflow-hidden rounded-sm border border-white/10 group">
+                <img src="/assets/img-meeting.jpg" alt="Meeting" className="object-cover w-full h-full transition-transform duration-700 group-hover:scale-110" />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#0B1C2C] to-transparent opacity-60" />
+                <div className="absolute bottom-4 left-4 text-[10px] uppercase tracking-widest text-white/80">Strategic Advisory</div>
+              </div>
+            </div>
+          </section>
         </div>
 
         <footer className="mt-16 pt-8 border-t border-white/10 text-[10px] text-[#A1B0C0] uppercase tracking-[0.2em] flex justify-between font-sans">
@@ -252,7 +268,7 @@ export default function LandingPage() {
         <div
           className="absolute inset-0 opacity-10 pointer-events-none mix-blend-overlay"
           style={{
-            backgroundImage: "url('https://images.unsplash.com/photo-1640027659327-96f1043e4278?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NjZ8MHwxfHNlYXJjaHwyfHxkYXJrJTIwbmF2eSUyMGJsdWUlMjBhYnN0cmFjdCUyMGdvbGQlMjB0ZXh0dXJlfGVufDB8fHx8MTc3NTA3NzExM3ww&ixlib=rb-4.1.0&q=85')",
+            backgroundImage: "url('/assets/bg-hero.jpg')",
             backgroundSize: "cover", backgroundPosition: "center",
           }}
         />
