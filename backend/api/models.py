@@ -1,9 +1,11 @@
 import uuid
 from django.db import models
+from django.contrib.auth.models import User
 
 class Client(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    organization_name = models.CharField(max_length=255)
+    user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True)
+    organization_name = models.CharField(max_length=255, null=True, blank=True)
     contact_name = models.CharField(max_length=255)
     email = models.EmailField(unique=True)
     phone = models.CharField(max_length=50)
@@ -12,7 +14,7 @@ class Client(models.Model):
     engagement_scope = models.JSONField(default=list)
     project_stage = models.CharField(max_length=100)
     budget_range = models.CharField(max_length=100)
-    engagement_type = models.CharField(max_length=50, choices=[('one_time', 'One Time'), ('retainer', 'Retainer')])
+    project_summary = models.TextField(null=True, blank=True)
     assigned_consultant_id = models.UUIDField(null=True, blank=True)
     assignment_status = models.CharField(max_length=50, choices=[('unassigned', 'Unassigned'), ('assigned', 'Assigned'), ('active', 'Active'), ('completed', 'Completed')], default='unassigned')
     onboarded_at = models.DateTimeField(auto_now_add=True)

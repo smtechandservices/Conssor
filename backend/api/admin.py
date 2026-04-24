@@ -7,9 +7,7 @@ from .models import (
 
 @admin.register(Client)
 class ClientAdmin(admin.ModelAdmin):
-    list_display = ('organization_name', 'contact_name', 'email', 'country', 'engagement_type', 'assignment_status')
-    search_fields = ('organization_name', 'contact_name', 'email')
-    list_filter = ('assignment_status', 'engagement_type', 'project_stage')
+    list_display = ('organization_name', 'contact_name', 'email', 'country', 'project_summary', 'assignment_status')
 
 @admin.register(Consultant)
 class ConsultantAdmin(admin.ModelAdmin):
