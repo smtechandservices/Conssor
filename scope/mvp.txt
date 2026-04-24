@@ -1101,8 +1101,6 @@ EngagementQuote {
   ai_rationale: string
   ai_confidence_score: float
   ai_estimated_weeks: number
-  admin_override_price: number?      // Set if admin adjusted
-  admin_override_note: string?
   final_price: number                // What client sees
   status: enum                       // pending_admin | sent_to_client | revision_requested | accepted
   created_at: timestamp
@@ -1389,7 +1387,7 @@ try:
         ai_rationale=pricing['pricing_rationale'],
         ai_confidence_score=pricing['confidence_score'],
         ai_estimated_weeks=pricing['estimated_duration_weeks'],
-        final_price=pricing['recommended_price_usd'], # Admin can override later
+        final_price=pricing['recommended_price_usd'],
         status='pending_admin'
     )
     

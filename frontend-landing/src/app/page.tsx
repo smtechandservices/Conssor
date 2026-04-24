@@ -48,8 +48,8 @@ const PROJECT_STATUSES = [
 ];
 
 interface FormData {
-  fullName: string; email: string; phone: string;
-  organizationName: string; projectIdea: string; project_status: string;
+  full_name: string; email: string; phone: string;
+  organization_name: string; project_summary: string; project_stage: string;
   domain_tags: string[]; engagement_scope: string[];
   country: string; budget_range: string;
   password: string; confirmPassword: string;
@@ -57,7 +57,9 @@ interface FormData {
 
 export default function LandingPage() {
   const [mode, setMode] = useState<"chat" | "onboarding">("chat");
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    { role: "assistant", content: "How can I assist you today?" },
+  ]);
   const [chatInput, setChatInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -72,16 +74,14 @@ export default function LandingPage() {
   const [isExistingEmail, setIsExistingEmail] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [form, setForm] = useState<FormData>({
-    fullName: "", email: "", phone: "", organizationName: "", projectIdea: "",
-    project_status: "", domain_tags: [], engagement_scope: [],
+    full_name: "", email: "", phone: "", organization_name: "", project_summary: "",
+    project_stage: "", domain_tags: [], engagement_scope: [],
     country: "", budget_range: "", password: "", confirmPassword: "",
   });
 
   const setField = (f: keyof FormData, v: string) => setForm(p => ({ ...p, [f]: v }));
   const toggleArr = (f: "domain_tags" | "engagement_scope", v: string) =>
     setForm(p => { const a = p[f] as string[]; return { ...p, [f]: a.includes(v) ? a.filter(x => x !== v) : [...a, v] }; });
-
-  useEffect(() => { fetchAIReply([]); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -134,9 +134,12 @@ export default function LandingPage() {
 
   const progress = isCompleted ? 100 : Math.round((step / STEPS.length) * 100);
 
+  const MIN_DESC_WORDS = 20;
+  const descWordCount = form.project_summary.trim() === "" ? 0 : form.project_summary.trim().split(/\s+/).length;
+
   const canAdvance = () => {
-    if (step === 0) return !!(form.fullName.trim() && form.email.trim() && form.phone.trim()) && !isExistingEmail;
-    if (step === 1) return !!(form.projectIdea.trim() && form.project_status);
+    if (step === 0) return !!(form.full_name.trim() && form.email.trim() && form.phone.trim()) && !isExistingEmail;
+    if (step === 1) return !!(form.project_summary.trim() && form.project_stage) && descWordCount >= MIN_DESC_WORDS;
     if (step === 2) return form.domain_tags.length > 0 && form.engagement_scope.length > 0;
     if (step === 3) return !!(form.country.trim() && form.budget_range);
     if (step === 4) return form.password.length >= 8 && form.password === form.confirmPassword;
@@ -149,10 +152,10 @@ export default function LandingPage() {
       const res = await fetch("http://localhost:8000/api/quotes/generate/", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          fullName: form.fullName, email: form.email, phone: form.phone,
-          organizationName: form.organizationName,
-          projectName: form.projectIdea.slice(0, 80), description: form.projectIdea,
-          project_stage: form.project_status, domain_tags: form.domain_tags,
+          full_name: form.full_name, email: form.email, phone: form.phone,
+          organization_name: form.organization_name,
+          project_summary: form.project_summary,
+          project_stage: form.project_stage, domain_tags: form.domain_tags,
           engagement_scope: form.engagement_scope, country: form.country,
           budget_range: form.budget_range, password: form.password,
         }),
@@ -388,11 +391,11 @@ export default function LandingPage() {
                           <p className="text-[#A1B0C0] text-xs tracking-wide mt-1">We'll use this to set up your advisory profile.</p>
                         </div>
                         <div>
-                          <label className="block text-[10px] uppercase tracking-[0.2em] text-[#A1B0C0] mb-2">Full Name</label>
-                          <input className={inputCls} placeholder="Jane Smith" value={form.fullName} onChange={e => setField("fullName", e.target.value)} />
+                          <label className="block text-[10px] uppercase tracking-[0.2em] text-[#A1B0C0] mb-2">Full Name <span className="text-red-400">*</span></label>
+                          <input className={inputCls} placeholder="Jane Smith" value={form.full_name} onChange={e => setField("full_name", e.target.value)} />
                         </div>
                         <div>
-                          <label className="block text-[10px] uppercase tracking-[0.2em] text-[#A1B0C0] mb-2">Email Address</label>
+                          <label className="block text-[10px] uppercase tracking-[0.2em] text-[#A1B0C0] mb-2">Email Address <span className="text-red-400">*</span></label>
                           <input className={inputCls} type="email" placeholder="jane@company.com" value={form.email} onChange={e => setField("email", e.target.value)} />
                         </div>
                         {isExistingEmail && (
@@ -410,7 +413,7 @@ export default function LandingPage() {
                         )}
                         {!isExistingEmail && (
                           <div>
-                            <label className="block text-[10px] uppercase tracking-[0.2em] text-[#A1B0C0] mb-2">Phone Number</label>
+                            <label className="block text-[10px] uppercase tracking-[0.2em] text-[#A1B0C0] mb-2">Phone Number <span className="text-red-400">*</span></label>
                             <input className={inputCls} type="tel" placeholder="9876543210" value={form.phone} onChange={e => setField("phone", e.target.value)} />
                           </div>
                         )}
@@ -425,15 +428,39 @@ export default function LandingPage() {
                         </div>
                         <div>
                           <label className="block text-[10px] uppercase tracking-[0.2em] text-[#A1B0C0] mb-2">Organization Name <span className="text-white/30 normal-case">(optional)</span></label>
-                          <input className={inputCls} placeholder="Acme Corp" value={form.organizationName} onChange={e => setField("organizationName", e.target.value)} />
+                          <input className={inputCls} placeholder="Acme Corp" value={form.organization_name} onChange={e => setField("organization_name", e.target.value)} />
                         </div>
                         <div>
-                          <label className="block text-[10px] uppercase tracking-[0.2em] text-[#A1B0C0] mb-2">Project / Idea Description</label>
-                          <textarea className={inputCls + " resize-none min-h-[90px]"} placeholder="Describe your project vision..." value={form.projectIdea} onChange={e => setField("projectIdea", e.target.value)} rows={3} />
+                          <label className="block text-[10px] uppercase tracking-[0.2em] text-[#A1B0C0] mb-2">Project / Idea Description <span className="text-red-400">*</span></label>
+                          <textarea
+                            className={inputCls + " resize-none min-h-[130px]"}
+                            placeholder="Describe your project in detail, the problem you're solving, what you've built so far, your target market, and what kind of expert help you need. (Minimum 20 words)"
+                            value={form.project_summary}
+                            onChange={e => setField("project_summary", e.target.value)}
+                            rows={5}
+                          />
+                          <div className="flex justify-between items-center mt-1.5">
+                            <span className={`text-[10px] tracking-wider transition-colors ${
+                              descWordCount >= MIN_DESC_WORDS
+                                ? "text-[#C8A96A]"
+                                : descWordCount > 0
+                                  ? "text-[#A1B0C0]"
+                                  : "text-white/20"
+                            }`}>
+                              {descWordCount >= MIN_DESC_WORDS
+                                ? `✓ ${descWordCount} words`
+                                : `${descWordCount} / ${MIN_DESC_WORDS} words minimum`}
+                            </span>
+                            {descWordCount > 0 && descWordCount < MIN_DESC_WORDS && (
+                              <span className="text-[10px] text-white/30 tracking-wide">
+                                {MIN_DESC_WORDS - descWordCount} more word{MIN_DESC_WORDS - descWordCount !== 1 ? "s" : ""} needed
+                              </span>
+                            )}
+                          </div>
                         </div>
                         <div>
-                          <label className="block text-[10px] uppercase tracking-[0.2em] text-[#A1B0C0] mb-2">Current Stage</label>
-                          <select className={inputCls + " cursor-pointer"} value={form.project_status} onChange={e => setField("project_status", e.target.value)}>
+                          <label className="block text-[10px] uppercase tracking-[0.2em] text-[#A1B0C0] mb-2">Current Stage <span className="text-red-400">*</span></label>
+                          <select className={inputCls + " cursor-pointer"} value={form.project_stage} onChange={e => setField("project_stage", e.target.value)}>
                             <option value="" disabled>Select stage...</option>
                             {PROJECT_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
                           </select>
@@ -448,7 +475,7 @@ export default function LandingPage() {
                           <p className="text-[#A1B0C0] text-xs tracking-wide mt-1">Select all that apply.</p>
                         </div>
                         <div>
-                          <label className="block text-[10px] uppercase tracking-[0.2em] text-[#A1B0C0] mb-3">Industry Verticals</label>
+                          <label className="block text-[10px] uppercase tracking-[0.2em] text-[#A1B0C0] mb-3">Industry Verticals <span className="text-red-400">*</span></label>
                           <div className="flex flex-wrap gap-2">
                             {DOMAIN_TAGS.map(tag => (
                               <button key={tag} type="button" onClick={() => toggleArr("domain_tags", tag)}
@@ -459,7 +486,7 @@ export default function LandingPage() {
                           </div>
                         </div>
                         <div>
-                          <label className="block text-[10px] uppercase tracking-[0.2em] text-[#A1B0C0] mb-3">Consulting Services Needed</label>
+                          <label className="block text-[10px] uppercase tracking-[0.2em] text-[#A1B0C0] mb-3">Consulting Services Needed <span className="text-red-400">*</span></label>
                           <div className="flex flex-wrap gap-2">
                             {ENGAGEMENT_SCOPE.map(svc => (
                               <button key={svc} type="button" onClick={() => toggleArr("engagement_scope", svc)}
@@ -479,11 +506,11 @@ export default function LandingPage() {
                           <p className="text-[#A1B0C0] text-xs tracking-wide mt-1">Helps us match the right consultant and price the engagement.</p>
                         </div>
                         <div>
-                          <label className="block text-[10px] uppercase tracking-[0.2em] text-[#A1B0C0] mb-2">Country / Region</label>
+                          <label className="block text-[10px] uppercase tracking-[0.2em] text-[#A1B0C0] mb-2">Country / Region <span className="text-red-400">*</span></label>
                           <input className={inputCls} placeholder="United States" value={form.country} onChange={e => setField("country", e.target.value)} />
                         </div>
                         <div>
-                          <label className="block text-[10px] uppercase tracking-[0.2em] text-[#A1B0C0] mb-2">Approximate Budget Range</label>
+                          <label className="block text-[10px] uppercase tracking-[0.2em] text-[#A1B0C0] mb-2">Approximate Budget Range <span className="text-red-400">*</span></label>
                           <select className={inputCls + " cursor-pointer"} value={form.budget_range} onChange={e => setField("budget_range", e.target.value)}>
                             <option value="" disabled>Select range...</option>
                             {BUDGET_RANGES.map(r => <option key={r} value={r}>{r}</option>)}
@@ -499,7 +526,7 @@ export default function LandingPage() {
                           <p className="text-[#A1B0C0] text-xs tracking-wide mt-1">Set a password to access your client portal.</p>
                         </div>
                         <div>
-                          <label className="block text-[10px] uppercase tracking-[0.2em] text-[#A1B0C0] mb-2">Password</label>
+                          <label className="block text-[10px] uppercase tracking-[0.2em] text-[#A1B0C0] mb-2">Password <span className="text-red-400">*</span></label>
                           <div className="relative">
                             <input type={showPw ? "text" : "password"} className={inputCls + " pr-10"} placeholder="Min. 8 characters" value={form.password} onChange={e => setField("password", e.target.value)} />
                             <button type="button" onClick={() => setShowPw(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#A1B0C0] hover:text-[#C8A96A] transition-colors">
@@ -508,7 +535,7 @@ export default function LandingPage() {
                           </div>
                         </div>
                         <div>
-                          <label className="block text-[10px] uppercase tracking-[0.2em] text-[#A1B0C0] mb-2">Confirm Password</label>
+                          <label className="block text-[10px] uppercase tracking-[0.2em] text-[#A1B0C0] mb-2">Confirm Password <span className="text-red-400">*</span></label>
                           <div className="relative">
                             <input type={showCpw ? "text" : "password"} className={inputCls + " pr-10"} placeholder="Re-enter password" value={form.confirmPassword} onChange={e => setField("confirmPassword", e.target.value)} />
                             <button type="button" onClick={() => setShowCpw(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#A1B0C0] hover:text-[#C8A96A] transition-colors">

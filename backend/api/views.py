@@ -6,7 +6,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.utils import timezone
 from groq import Groq
-from .models import Client, Engagement, EngagementQuote
+from .models import Client, Engagement, EngagementQuote, ClientPayment
 
 def call_groq_api(messages, preferred_model, fallback_model, response_format=None, max_tokens=2048):
     """
@@ -42,32 +42,44 @@ def call_groq_api(messages, preferred_model, fallback_model, response_format=Non
         )
         return completion.choices[0].message.content
 
-def generate_pricing_prompt(data):
+def generate_pricing_prompt(client, engagement_type=None):
+    scope_count = len(client.engagement_scope) if client.engagement_scope else 0
+    industries = ', '.join(client.domain_tags) if client.domain_tags else 'Not specified'
+    services = ', '.join(client.engagement_scope) if client.engagement_scope else 'Not specified'
+
     return f"""
-You are CONSSOR's engagement pricing specialist. Analyze this consulting engagement request and provide a pricing recommendation.
+You are CONSSOR's engagement pricing specialist. Analyze this consulting engagement request and provide a precise pricing recommendation.
 
-INPUT DATA:
-- Industry: {', '.join(data.get('domain_tags', []))}
-- Services: {', '.join(data.get('engagement_scope', []))}
-- Project Stage: {data.get('project_stage')}
-- Engagement Type: {data.get('engagement_type')}
-- Client Budget Range: {data.get('budget_range')}
-- Country: {data.get('country')}
-- Description: "{data.get('description')}"
+CLIENT PROFILE:
+- Organisation: {client.organization_name or 'Individual'}
+- Contact: {client.contact_name}
+- Email: {client.email}
+- Phone: {client.phone}
+- Country: {client.country}
 
-PRICING FACTORS:
-1. Industry complexity (Financial Services, Healthcare = premium; Retail, Agriculture = standard)
-2. Multi-scope engagements (2+ services) = +30% base
-3. Project stage: Ideation (1x), Growth (1.5x), M&A/Transaction (2.5x)
-4. Retainer vs One-time: Retainer = sustained delivery pricing
-5. Geographic cost adjustment: India/Turkey = 0.7x, US/Europe = 1.0x
+ENGAGEMENT DETAILS:
+- Industry Verticals: {industries}
+- Services Requested: {services} ({scope_count} service{'s' if scope_count != 1 else ''})
+- Project Stage: {client.project_stage}
+- Engagement Type: {engagement_type or 'Not specified'}
+- Client Budget Range: {client.budget_range}
+- Project Summary: "{client.project_summary or 'Not provided'}"
+
+PRICING METHODOLOGY:
+1. Industry complexity premium: Financial Services / Healthcare / M&A = 1.5–2.5x base; Tech / Energy = 1.2x; Retail / Agriculture = 1.0x
+2. Multi-scope multiplier: 2 services = +30%, 3+ services = +50% above base
+3. Project stage multiplier: Ideation = 1.0x, Validation = 1.2x, Growth = 1.5x, M&A / Transaction = 2.5x
+4. Engagement type: Retainer = sustained delivery, add +20% to base; One-time = fixed scope pricing
+5. Geographic cost index: India / Turkey / SE Asia = 0.7x; MENA / LATAM = 0.85x; US / UK / Europe / ANZ = 1.0x
+6. Budget alignment: calibrate final recommendation within or just above the stated budget range where feasible
 
 OUTPUT REQUIRED (respond ONLY with valid JSON, no markdown):
 {{
   "recommended_price_usd": <number>,
   "price_range_low": <number>,
   "price_range_high": <number>,
-  "pricing_rationale": "<2-3 sentence explanation>",
+  "pricing_rationale": "<2-3 sentence explanation referencing the client's specific industry, scope, geography, and project stage>",
+  "ai_scope_of_work": "<detailed breakdown of what Conssor understood about the project, the core challenges, and exactly how Conssor's vetted experts and governance will ensure success. This should be 3-5 lines maximum.>",
   "estimated_duration_weeks": <number>,
   "confidence_score": <0.0-1.0>
 }}
@@ -112,11 +124,16 @@ def check_email(request):
 def generate_quote(request):
     data = request.data
     
+    # Validation
+    project_summary = data.get('project_summary', '').strip()
+    if not project_summary or len(project_summary.split()) < 20:
+        return Response({"error": "Project summary is required and must be at least 20 words."}, status=status.HTTP_400_BAD_REQUEST)
+
     # 1. Create the Client stub
-    org_name = data.get('organizationName') or data.get('projectName') or 'Individual Client'
+    org_name = data.get('organization_name') or 'Individual Client'
     client = Client.objects.create(
         organization_name=org_name,
-        contact_name=data.get('fullName', 'Unknown'),
+        contact_name=data.get('full_name', 'Unknown'),
         email=data.get('email', f"temp_{timezone.now().timestamp()}@example.com"),
         phone=data.get('phone', ''),
         country=data.get('country', ''),
@@ -144,7 +161,7 @@ def generate_quote(request):
     try:
         # Preferred: 70B Versatile, Fallback: 3.1 8B Instant
         content = call_groq_api(
-            messages=[{"role": "user", "content": generate_pricing_prompt(data)}],
+            messages=[{"role": "user", "content": generate_pricing_prompt(client, engagement_type=data.get('engagement_type'))}],
             preferred_model="llama-3.3-70b-versatile",
             fallback_model="llama-3.1-8b-instant",
             response_format={"type": "json_object"}
@@ -158,6 +175,7 @@ def generate_quote(request):
             ai_price_range_low=pricing.get('price_range_low', 0),
             ai_price_range_high=pricing.get('price_range_high', 0),
             ai_rationale=pricing.get('pricing_rationale', ''),
+            ai_scope_of_work=pricing.get('ai_scope_of_work', ''),
             ai_confidence_score=pricing.get('confidence_score', 0.5),
             ai_estimated_weeks=pricing.get('estimated_duration_weeks', 4),
             final_price=pricing.get('recommended_price_usd', 0), # Admin can override later
@@ -227,3 +245,124 @@ def advisory_chat(request):
         return Response({"error": f"AI service unavailable: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def client_overview(_request, client_id):
+    try:
+        client = Client.objects.get(id=client_id)
+    except Client.DoesNotExist:
+        return Response({"error": "Client not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    from django.db.models import Sum
+    engagements = Engagement.objects.filter(client=client)
+    quotes = EngagementQuote.objects.filter(engagement__client=client)
+    total_spend = ClientPayment.objects.filter(client=client, status='paid').aggregate(t=Sum('amount'))['t'] or 0
+
+    return Response({
+        "client": {
+            "id": str(client.id),
+            "organization_name": client.organization_name,
+            "contact_name": client.contact_name,
+            "email": client.email,
+            "country": client.country,
+            "domain_tags": client.domain_tags,
+            "engagement_scope": client.engagement_scope,
+            "project_stage": client.project_stage,
+            "budget_range": client.budget_range,
+            "assignment_status": client.assignment_status,
+            "onboarded_at": client.onboarded_at,
+        },
+        "stats": {
+            "active_engagements": engagements.filter(status='active').count(),
+            "pending_quotes": quotes.filter(status__in=['pending_admin', 'sent_to_client']).count(),
+            "total_spend_usd": float(total_spend),
+        }
+    })
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def client_quotes(_request, client_id):
+    try:
+        client = Client.objects.get(id=client_id)
+    except Client.DoesNotExist:
+        return Response({"error": "Client not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    quotes = EngagementQuote.objects.filter(
+        engagement__client=client
+    ).select_related('engagement').order_by('-created_at')
+
+    return Response({
+        "client": {
+            "organization_name": client.organization_name,
+            "contact_name": client.contact_name,
+            "email": client.email,
+            "phone": client.phone,
+            "country": client.country,
+            "domain_tags": client.domain_tags,
+            "engagement_scope": client.engagement_scope,
+            "project_stage": client.project_stage,
+            "budget_range": client.budget_range,
+            "project_summary": client.project_summary,
+        },
+        "quotes": [{
+            "id": str(q.id),
+            "scope": q.engagement.scope,
+            "stage": q.engagement.stage,
+            "ai_recommended_price": float(q.ai_recommended_price),
+            "ai_price_range_low": float(q.ai_price_range_low),
+            "ai_price_range_high": float(q.ai_price_range_high),
+            "ai_rationale": q.ai_rationale,
+            "ai_scope_of_work": q.ai_scope_of_work,
+            "ai_confidence_score": float(q.ai_confidence_score),
+            "ai_estimated_weeks": q.ai_estimated_weeks,
+            "final_price": float(q.final_price),
+            "status": q.status,
+            "created_at": q.created_at,
+        } for q in quotes],
+    })
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def client_engagements(_request, client_id):
+    try:
+        client = Client.objects.get(id=client_id)
+    except Client.DoesNotExist:
+        return Response({"error": "Client not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    engagements = Engagement.objects.filter(client=client).prefetch_related('milestones').select_related('consultant').order_by('-start_date')
+
+    data = []
+    for e in engagements:
+        consultant_info = None
+        if e.consultant:
+            c = e.consultant
+            consultant_info = {
+                "full_name": c.full_name,
+                "email": c.email,
+                "bio": c.bio,
+                "years_experience": c.years_experience,
+                "domain_expertise": c.domain_expertise,
+                "rating": c.rating,
+                "linkedin_url": c.linkedin_url,
+            }
+        data.append({
+            "id": str(e.id),
+            "scope": e.scope,
+            "stage": e.stage,
+            "status": e.status,
+            "start_date": str(e.start_date),
+            "end_date": str(e.end_date) if e.end_date else None,
+            "consultant": consultant_info,
+            "milestones": [{
+                "id": str(m.id),
+                "name": m.name,
+                "due_date": str(m.due_date),
+                "status": m.status,
+                "owner": m.owner,
+                "notes": m.notes,
+            } for m in e.milestones.all().order_by('due_date')],
+        })
+
+    return Response({"engagements": data})
