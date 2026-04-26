@@ -11,4 +11,9 @@ urlpatterns = [
     path('client/<uuid:client_id>/engagements/', views.client_engagements, name='client_engagements'),
     path('client/<uuid:client_id>/payments/', views.client_payments, name='client_payments'),
     path('payments/process/', views.process_payment, name='process_payment'),
+    path('consultant/register/', views.consultant_register, name='consultant_register'),
+    path('consultant/login/', views.consultant_login, name='consultant_login'),
+    path('consultant/<uuid:consultant_id>/dashboard/', views.consultant_dashboard, name='consultant_dashboard'),
+    path('consultant/<uuid:consultant_id>/clients/', views.consultant_clients, name='consultant_clients'),
+    path('consultant/<uuid:consultant_id>/leads/', views.consultant_leads, name='consultant_leads'),
 ]

@@ -6,7 +6,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.utils import timezone
 from groq import Groq
-from .models import Client, Engagement, EngagementQuote, ClientPayment
+from .models import Client, Engagement, EngagementQuote, ClientPayment, Consultant
 
 def call_groq_api(messages, preferred_model, fallback_model, response_format=None, max_tokens=2048):
     """
@@ -108,6 +108,66 @@ def client_login(request):
         pass
 
     return Response({"success": True, "user": client_data})
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def consultant_login(request):
+    email = request.data.get('email', '').strip().lower()
+    password = request.data.get('password', '')
+    if not email or not password:
+        return Response({"error": "Email and password are required."}, status=status.HTTP_400_BAD_REQUEST)
+
+    from django.contrib.auth import authenticate
+    user = authenticate(username=email, password=password)
+    if not user:
+        return Response({"error": "Invalid email or password."}, status=status.HTTP_401_UNAUTHORIZED)
+
+    try:
+        consultant = Consultant.objects.get(user=user)
+        consultant_data = {
+            "email": user.email,
+            "name": consultant.full_name,
+            "consultant_id": str(consultant.id),
+        }
+        return Response({"success": True, "user": consultant_data})
+    except Consultant.DoesNotExist:
+        return Response({"error": "Consultant profile not found for this user."}, status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def consultant_register(request):
+    data = request.data
+    email = data.get('email', '').strip().lower()
+    password = data.get('password', '')
+    full_name = data.get('full_name', '')
+    linkedin_url = data.get('linkedin', '')
+
+    if not email or not password or not full_name:
+        return Response({"error": "Email, password and full name are required."}, status=status.HTTP_400_BAD_REQUEST)
+
+    from django.contrib.auth.models import User
+    if User.objects.filter(email=email).exists():
+        return Response({"error": "Email already registered."}, status=status.HTTP_400_BAD_REQUEST)
+
+    user = User.objects.create_user(
+        username=email,
+        email=email,
+        password=password,
+        first_name=full_name.split(' ')[0] if ' ' in full_name else full_name
+    )
+
+    consultant = Consultant.objects.create(
+        user=user,
+        full_name=full_name,
+        email=email,
+        linkedin_url=linkedin_url
+    )
+
+    return Response({
+        "success": True,
+        "message": "Consultant application submitted successfully.",
+        "consultant_id": str(consultant.id)
+    })
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -337,9 +397,15 @@ def client_engagements(_request, client_id):
     for e in engagements:
         consultant_info = None
         if e.consultant:
+            c = e.consultant
             consultant_info = {
-                "full_name": e.consultant.full_name,
-                "email": e.consultant.email,
+                "full_name": c.full_name,
+                "email": c.email,
+                "bio": c.bio,
+                "years_experience": c.years_experience,
+                "domain_expertise": c.domain_expertise,
+                "rating": c.rating,
+                "linkedin_url": c.linkedin_url,
             }
             
         # Financial stats
@@ -529,3 +595,60 @@ def client_payments(_request, client_id):
             "gateway_payment_id": p.gateway_payment_id,
         } for p in payments]
     })
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def consultant_dashboard(_request, consultant_id):
+    try:
+        consultant = Consultant.objects.get(id=consultant_id)
+    except Consultant.DoesNotExist:
+        return Response({"error": "Consultant not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    from django.db.models import Sum
+    active_engagements = Engagement.objects.filter(consultant=consultant, status='active')
+    total_earnings = ClientPayment.objects.filter(engagement__consultant=consultant, status='paid').aggregate(t=Sum('consultant_payout_amount'))['t'] or 0
+    
+    # Mock data for upcoming sessions and pending KYC for now
+    return Response({
+        "stats": {
+            "active_clients": active_engagements.count(),
+            "total_earnings_usd": float(total_earnings),
+            "upcoming_sessions": 3,
+            "pending_kyc": 2 if consultant.kyc_status != 'verified' else 0,
+        },
+        "recent_activity": [
+            {"event": "System login", "time": "Just now"},
+            {"event": "Profile updated", "time": "2 hours ago"}
+        ]
+    })
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def consultant_clients(_request, consultant_id):
+    try:
+        consultant = Consultant.objects.get(id=consultant_id)
+    except Consultant.DoesNotExist:
+        return Response({"error": "Consultant not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    engagements = Engagement.objects.filter(consultant=consultant).select_related('client')
+    
+    return Response({
+        "clients": [{
+            "id": str(e.client.id),
+            "engagement_id": str(e.id),
+            "name": e.client.organization_name,
+            "contact": e.client.contact_name,
+            "domain": e.client.domain_tags[0] if e.client.domain_tags else "General",
+            "stage": e.stage,
+            "status": e.status,
+            "start": str(e.start_date)
+        } for e in engagements]
+    })
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def consultant_leads(_request, consultant_id):
+    # For now, Lead model might not be fully implemented or linked to Consultant
+    # Let's check the model
+    return Response({"leads": []})

@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 const API = "http://localhost:8000/api";
 
 const ENGAGEMENT_STATUS: Record<string, { label: string; cls: string }> = {
+  assigned:  { label: "Assigned",  cls: "bg-blue-500/20 text-blue-300 border-blue-500/30" },
   active:    { label: "Active",    cls: "bg-green-500/20 text-green-300 border-green-500/30" },
   on_hold:   { label: "On Hold",   cls: "bg-yellow-500/20 text-yellow-300 border-yellow-500/30" },
   completed: { label: "Completed", cls: "bg-primary/20 text-primary border-primary/30" },
@@ -96,13 +97,13 @@ export default function EngagementDetailPage() {
       <div className="p-8 max-w-6xl mx-auto w-full animate-in fade-in slide-in-from-bottom-2 duration-500 relative">
         
         {/* Lock System: Matching takes priority, then Payment */}
-        {!engagement.consultant ? (
+        {(!engagement.consultant && engagement.status !== "assigned") ? (
           <div className="fixed inset-0 z-[100] bg-[#0B1C2C]/80 backdrop-blur-md flex flex-col items-center justify-center p-8 text-center animate-in fade-in duration-700">
             <div className="w-20 h-20 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-primary mb-8 shadow-[0_0_30px_rgba(200,169,106,0.3)]">
                <span className="text-4xl animate-pulse">◈</span>
             </div>
             <h3 className="text-3xl font-heading mb-4">Strategic Matching in Progress</h3>
-            <p className="text-sm text-muted-foreground uppercase tracking-widest max-w-md mb-12 leading-relaxed">
+            <p className="text-sm text-muted-foreground uppercase tracking-[0.15em] max-w-lg mb-12 leading-relaxed">
               Our vetting engine is currently analyzing over 1,200 domain experts to find the perfect strategic match for your specific scope.
             </p>
             
@@ -338,11 +339,11 @@ export default function EngagementDetailPage() {
                        </div>
                        <h4 className="text-lg font-heading mb-1">{engagement.consultant.full_name}</h4>
                        <div className="text-[9px] uppercase tracking-[0.15em] text-muted-foreground mb-4">
-                         Expert Consultant · {engagement.consultant.years_experience} yrs exp
+                         Expert Consultant · {engagement.consultant.years_experience || 0} yrs exp
                        </div>
                        
                        <p className="text-xs text-muted-foreground font-sans leading-relaxed mb-6 italic">
-                         "{engagement.consultant.bio.length > 120 ? engagement.consultant.bio.slice(0, 120) + "..." : engagement.consultant.bio}"
+                         "{engagement.consultant.bio ? (engagement.consultant.bio.length > 120 ? engagement.consultant.bio.slice(0, 120) + "..." : engagement.consultant.bio) : "No bio provided."}"
                        </p>
 
                        <div className="flex flex-wrap justify-center gap-2 mb-6">

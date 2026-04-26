@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 const API = "http://localhost:8000/api";
 
 const ENGAGEMENT_STATUS: Record<string, { label: string; cls: string }> = {
+  assigned:  { label: "Assigned",  cls: "bg-blue-500/20 text-blue-300 border-blue-500/30" },
   active:    { label: "Active",    cls: "bg-green-500/20 text-green-300 border-green-500/30" },
   on_hold:   { label: "On Hold",   cls: "bg-yellow-500/20 text-yellow-300 border-yellow-500/30" },
   completed: { label: "Completed", cls: "bg-primary/20 text-primary border-primary/30" },
@@ -86,8 +87,8 @@ export default function EngagementsPage() {
             <div className="space-y-8">
               {engagements.map(e => {
                 const isUnpaid = e.payment_status === "unpaid";
-                const isMatching = !e.consultant;
-                const isLocked = isUnpaid || isMatching;
+                const isMatching = !e.consultant && e.status !== "assigned";
+                const isLocked = isUnpaid || (isMatching && e.status !== "assigned");
                 const s = ENGAGEMENT_STATUS[e.status] ?? { label: e.status, cls: "bg-white/5 text-muted-foreground border-white/10" };
                 const done = e.milestones.filter(m => m.status === "completed").length;
                 const total = e.milestones.length;
@@ -100,7 +101,7 @@ export default function EngagementsPage() {
                     {isMatching ? (
                       <div className="absolute inset-0 z-50 bg-[#0B1C2C]/90 flex flex-col items-center justify-center p-8 text-center animate-in fade-in duration-700">
                         <h3 className="text-lg font-heading mb-2">Matching in Progress</h3>
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-[0.2em] max-w-xs mb-4 leading-relaxed">
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-[0.15em] max-w-sm mb-4 leading-relaxed">
                           Our AI is finalizing the selection of best expert for your specific project needs.
                         </p>
                         <div className="flex items-center gap-2 text-[9px] text-primary uppercase tracking-widest font-bold">
@@ -181,14 +182,14 @@ export default function EngagementsPage() {
                           <div>
                             <div className="font-heading text-lg">{e.consultant.full_name}</div>
                             <div className="text-[10px] uppercase tracking-widest text-muted-foreground mt-0.5">
-                              {e.consultant.years_experience} yrs exp · {e.consultant.rating.toFixed(1)} ★
+                              {e.consultant.years_experience || 0} yrs exp · {(e.consultant.rating || 0).toFixed(1)} ★
                             </div>
                             <p className="text-sm text-muted-foreground font-sans mt-2 leading-relaxed max-w-xl">
-                              {e.consultant.bio}
+                              {e.consultant.bio || "No bio available."}
                             </p>
-                            {e.consultant.domain_expertise?.length > 0 && (
+                            {(e.consultant.domain_expertise?.length ?? 0) > 0 && (
                               <div className="flex flex-wrap gap-2 mt-3">
-                                {e.consultant.domain_expertise.map(d => (
+                                {e.consultant.domain_expertise?.map(d => (
                                   <span key={d} className="text-[10px] px-2 py-1 bg-primary/10 text-primary border border-primary/20 rounded-sm uppercase tracking-wider">
                                     {d}
                                   </span>
