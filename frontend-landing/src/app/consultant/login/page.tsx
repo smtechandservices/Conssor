@@ -37,9 +37,10 @@ export default function ConsultantLogin() {
         localStorage.setItem("conssor_user", JSON.stringify(data.user));
         localStorage.setItem("conssor_role", "consultant");
         
-        // Redirect to consultant portal (localhost:3002 as per plan or current dashboard if shared)
-        // For now, let's redirect to a success message or the client portal as a placeholder if 3002 is not up
-        window.location.href = "http://localhost:3001/dashboard"; 
+        // Redirect to consultant portal (localhost:3003)
+        // Since localStorage is not shared across ports, we pass the user data in the URL
+        const authData = btoa(JSON.stringify(data.user));
+        window.location.href = `http://localhost:3003/dashboard?auth=${authData}`; 
       } else {
         setError(data.error || "Invalid email or password.");
       }

@@ -4,6 +4,7 @@ import { BaseLayout } from "@/components/BaseLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { DollarSign, Download, ArrowUpRight, Clock } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export default function EarningsPage() {
   const earnings = [

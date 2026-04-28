@@ -37,6 +37,7 @@ class Consultant(models.Model):
     kyc_status = models.CharField(max_length=50, choices=[('pending', 'Pending'), ('partial', 'Partial'), ('verified', 'Verified'), ('flagged', 'Flagged')], default='pending')
     active_client_count = models.IntegerField(default=0)
     rating = models.FloatField(default=0.0)
+    resume_url = models.URLField(max_length=500, null=True, blank=True)
     onboarded_at = models.DateTimeField(auto_now_add=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -62,6 +63,7 @@ class Engagement(models.Model):
     stage = models.CharField(max_length=100)
     status = models.CharField(max_length=50, choices=[('assigned', 'Assigned'), ('active', 'Active'), ('on_hold', 'On Hold'), ('completed', 'Completed'), ('cancelled', 'Cancelled')], default='active')
     payment_status = models.CharField(max_length=50, choices=[('unpaid', 'Unpaid'), ('partially_paid', 'Partially Paid'), ('paid', 'Paid')], default='unpaid')
+    consultant_acceptance_status = models.CharField(max_length=50, choices=[('pending', 'Pending'), ('accepted', 'Accepted'), ('declined', 'Declined')], default='pending')
     start_date = models.DateField()
     end_date = models.DateField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -120,7 +122,9 @@ class EngagementQuote(models.Model):
     ai_confidence_score = models.FloatField()
     ai_estimated_weeks = models.IntegerField()
     final_price = models.DecimalField(max_digits=12, decimal_places=2)
-    status = models.CharField(max_length=50, choices=[('pending_admin', 'Pending Admin'), ('sent_to_client', 'Sent to Client'), ('revision_requested', 'Revision Requested'), ('accepted', 'Accepted')], default='pending_admin')
+    counter_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    negotiation_reason = models.TextField(null=True, blank=True)
+    status = models.CharField(max_length=50, choices=[('pending_admin', 'Pending Admin'), ('sent_to_client', 'Sent to Client'), ('revision_requested', 'Revision Requested'), ('accepted', 'Accepted'), ('negotiating', 'Negotiating')], default='pending_admin')
     created_at = models.DateTimeField(auto_now_add=True)
     sent_at = models.DateTimeField(null=True, blank=True)
 
@@ -158,3 +162,15 @@ class ConsultantSubscription(models.Model):
     current_period_end = models.DateTimeField()
     cancelled_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+class Message(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    engagement = models.ForeignKey(Engagement, on_delete=models.CASCADE, related_name='messages')
+    sender_type = models.CharField(max_length=20, choices=[('client', 'Client'), ('consultant', 'Consultant')])
+    sender_id = models.UUIDField() # ID of the Client or Consultant
+    text = models.TextField()
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"From {self.sender_type} in {self.engagement_id}"

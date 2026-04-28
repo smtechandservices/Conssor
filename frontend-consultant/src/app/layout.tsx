@@ -20,6 +20,8 @@ export const metadata: Metadata = {
   }
 };
 
+import { AuthGuard } from "@/components/AuthGuard";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -31,7 +33,9 @@ export default function RootLayout({
       className={cn("h-full", "antialiased", "dark", notoSerif.variable, "font-sans", geist.variable)}
     >
       <body className="min-h-full flex flex-col font-sans bg-background text-foreground selection:bg-primary/30">
-        {children}
+        <AuthGuard>
+          {children}
+        </AuthGuard>
       </body>
     </html>
   );

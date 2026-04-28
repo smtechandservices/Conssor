@@ -10,15 +10,19 @@ import {
   DollarSign, 
   ShieldCheck, 
   LogOut,
-  ChevronRight
+  ChevronRight,
+  MessageSquare,
+  User
 } from "lucide-react";
 
 const navItems = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Clients", href: "/clients", icon: Users },
   { name: "Leads", href: "/leads", icon: TrendingUp },
+  { name: "Messages", href: "/messages", icon: MessageSquare },
   { name: "Earnings", href: "/earnings", icon: DollarSign },
   { name: "KYC Status", href: "/kyc", icon: ShieldCheck },
+  { name: "Profile", href: "/profile", icon: User },
 ];
 
 export function Sidebar() {

@@ -15,5 +15,10 @@ urlpatterns = [
     path('consultant/login/', views.consultant_login, name='consultant_login'),
     path('consultant/<uuid:consultant_id>/dashboard/', views.consultant_dashboard, name='consultant_dashboard'),
     path('consultant/<uuid:consultant_id>/clients/', views.consultant_clients, name='consultant_clients'),
-    path('consultant/<uuid:consultant_id>/leads/', views.consultant_leads, name='consultant_leads'),
+    path('consultant/<uuid:consultant_id>/assigned-leads/', views.consultant_assigned_leads, name='consultant_assigned_leads'),
+    path('consultant/profile/<uuid:consultant_id>/', views.consultant_profile, name='consultant_profile'),
+    path('consultant/leads/respond/', views.consultant_respond_lead, name='consultant_respond_lead'),
+    path('consultant/leads/negotiate/', views.consultant_negotiate_lead, name='consultant_negotiate_lead'),
+    path('engagements/<uuid:engagement_id>/messages/', views.get_messages, name='get_messages'),
+    path('engagements/<uuid:engagement_id>/messages/send/', views.send_message, name='send_message'),
 ]

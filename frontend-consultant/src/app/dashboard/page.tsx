@@ -11,10 +11,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const userStr = localStorage.getItem("conssor_user");
-    if (!userStr) {
-      window.location.href = "http://localhost:3000/consultant/login";
-      return;
-    }
+    if (!userStr) return;
     const user = JSON.parse(userStr);
     
     fetch(`http://localhost:8000/api/consultant/${user.consultant_id}/dashboard/`)

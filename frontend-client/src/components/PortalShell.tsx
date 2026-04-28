@@ -8,6 +8,7 @@ import type { StoredClient } from "@/lib/types";
 const NAV = [
   { href: "/dashboard",    label: "Overview" },
   { href: "/engagements",  label: "Engagements" },
+  { href: "/messages",     label: "Messages" },
   { href: "/quotes",       label: "Quotes" },
   { href: "/docs",         label: "Documents" },
 ];

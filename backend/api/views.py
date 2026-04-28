@@ -6,7 +6,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.utils import timezone
 from groq import Groq
-from .models import Client, Engagement, EngagementQuote, ClientPayment, Consultant
+from .models import Client, Engagement, EngagementQuote, ClientPayment, Consultant, Message
 
 def call_groq_api(messages, preferred_model, fallback_model, response_format=None, max_tokens=2048):
     """
@@ -189,19 +189,23 @@ def generate_quote(request):
     if not project_summary or len(project_summary.split()) < 20:
         return Response({"error": "Project summary is required and must be at least 20 words."}, status=status.HTTP_400_BAD_REQUEST)
 
-    # 1. Create the Client stub
+    # 1. Create or Update the Client
+    client_email = data.get('email', f"temp_{timezone.now().timestamp()}@example.com")
     org_name = data.get('organization_name') or 'Individual Client'
-    client = Client.objects.create(
-        organization_name=org_name,
-        contact_name=data.get('full_name', 'Unknown'),
-        email=data.get('email', f"temp_{timezone.now().timestamp()}@example.com"),
-        phone=data.get('phone', ''),
-        country=data.get('country', ''),
-        domain_tags=data.get('domain_tags', []),
-        engagement_scope=data.get('engagement_scope', []),
-        project_stage=data.get('project_stage', ''),
-        budget_range=data.get('budget_range', ''),
-        project_summary=data.get('project_summary', '')
+    
+    client, created = Client.objects.update_or_create(
+        email=client_email,
+        defaults={
+            'organization_name': org_name,
+            'contact_name': data.get('full_name', 'Unknown'),
+            'phone': data.get('phone', ''),
+            'country': data.get('country', ''),
+            'domain_tags': data.get('domain_tags', []),
+            'engagement_scope': data.get('engagement_scope', []),
+            'project_stage': data.get('project_stage', ''),
+            'budget_range': data.get('budget_range', ''),
+            'project_summary': data.get('project_summary', '')
+        }
     )
     
     # 2. Create Engagement stub (wait for consultant assignment)
@@ -631,7 +635,10 @@ def consultant_clients(_request, consultant_id):
     except Consultant.DoesNotExist:
         return Response({"error": "Consultant not found."}, status=status.HTTP_404_NOT_FOUND)
 
-    engagements = Engagement.objects.filter(consultant=consultant).select_related('client')
+    engagements = Engagement.objects.filter(
+        consultant=consultant, 
+        consultant_acceptance_status='accepted'
+    ).select_related('client')
     
     return Response({
         "clients": [{
@@ -646,9 +653,219 @@ def consultant_clients(_request, consultant_id):
         } for e in engagements]
     })
 
+@api_view(['GET', 'POST'])
+@permission_classes([AllowAny])
+def consultant_profile(request, consultant_id):
+    try:
+        consultant = Consultant.objects.get(id=consultant_id)
+    except Consultant.DoesNotExist:
+        return Response({"error": "Consultant not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'GET':
+        return Response({
+            "profile": {
+                "full_name": consultant.full_name,
+                "email": consultant.email,
+                "phone": consultant.phone,
+                "bio": consultant.bio,
+                "years_experience": consultant.years_experience,
+                "linkedin_url": consultant.linkedin_url,
+                "domain_expertise": consultant.domain_expertise,
+                "resume_url": consultant.resume_url,
+                "kyc_status": consultant.kyc_status,
+                "availability_status": consultant.availability_status,
+                "rating": consultant.rating,
+            }
+        })
+    
+    elif request.method == 'POST':
+        data = request.data
+        consultant.full_name = data.get('full_name', consultant.full_name)
+        consultant.phone = data.get('phone', consultant.phone)
+        consultant.bio = data.get('bio', consultant.bio)
+        consultant.years_experience = data.get('years_experience', consultant.years_experience)
+        consultant.linkedin_url = data.get('linkedin_url', consultant.linkedin_url)
+        consultant.domain_expertise = data.get('domain_expertise', consultant.domain_expertise)
+        consultant.resume_url = data.get('resume_url', consultant.resume_url)
+        consultant.availability_status = data.get('availability_status', consultant.availability_status)
+        consultant.save()
+        return Response({"success": True, "message": "Profile updated successfully."})
+
 @api_view(['GET'])
 @permission_classes([AllowAny])
-def consultant_leads(_request, consultant_id):
-    # For now, Lead model might not be fully implemented or linked to Consultant
-    # Let's check the model
-    return Response({"leads": []})
+def consultant_assigned_leads(_request, consultant_id):
+    try:
+        consultant = Consultant.objects.get(id=consultant_id)
+    except Consultant.DoesNotExist:
+        return Response({"error": "Consultant not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    # Leads are engagements with status='assigned' or 'active' but acceptance is pending
+    leads = Engagement.objects.filter(
+        consultant=consultant,
+        consultant_acceptance_status__in=['pending', 'declined']
+    ).select_related('client').prefetch_related('quotes')
+
+    data = []
+    for lead in leads:
+        try:
+            quote = lead.quotes.latest('created_at')
+            price_info = {
+                "ai_price": float(quote.ai_recommended_price),
+                "final_price": float(quote.final_price),
+                "counter_price": float(quote.counter_price) if quote.counter_price else None,
+                "status": quote.status
+            }
+        except EngagementQuote.DoesNotExist:
+            price_info = None
+
+        data.append({
+            "id": str(lead.id),
+            "client_name": lead.client.organization_name,
+            "project_summary": lead.client.project_summary,
+            "domain_tags": lead.client.domain_tags,
+            "scope": lead.scope,
+            "stage": lead.stage,
+            "acceptance_status": lead.consultant_acceptance_status,
+            "price_info": price_info,
+            "created_at": lead.created_at
+        })
+
+    return Response({"leads": data})
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def consultant_respond_lead(request):
+    engagement_id = request.data.get('engagement_id')
+    response_action = request.data.get('action') # 'accept' or 'decline'
+    
+    try:
+        engagement = Engagement.objects.get(id=engagement_id)
+    except Engagement.DoesNotExist:
+        return Response({"error": "Engagement not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    if response_action == 'accept':
+        engagement.consultant_acceptance_status = 'accepted'
+        engagement.status = 'active'
+        engagement.save()
+        return Response({"success": True, "message": "Lead accepted. Engagement is now active."})
+    elif response_action == 'decline':
+        engagement.consultant_acceptance_status = 'declined'
+        # If declined, it should probably be unassigned from this consultant
+        engagement.consultant = None
+        engagement.save()
+        
+        # Also update client assignment status
+        client = engagement.client
+        client.assignment_status = 'unassigned'
+        client.save()
+        
+        return Response({"success": True, "message": "Lead declined and returned to unmatched pool."})
+    else:
+        return Response({"error": "Invalid action."}, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def consultant_negotiate_lead(request):
+    engagement_id = request.data.get('engagement_id')
+    counter_price = request.data.get('counter_price')
+    reason = request.data.get('reason')
+    
+    try:
+        engagement = Engagement.objects.select_related('client').get(id=engagement_id)
+        quote = engagement.quotes.latest('created_at')
+    except (Engagement.DoesNotExist, EngagementQuote.DoesNotExist):
+        return Response({"error": "Engagement or quote not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    # Call AI to mediate
+    negotiation_prompt = f"""
+You are CONSSOR's AI Conflict Mediator. A consultant is disagreeing with the AI-generated price for a project.
+Analyze the original project and the consultant's counter-proposal, then settle on a final fair price.
+
+PROJECT DETAILS:
+- Client: {engagement.client.organization_name}
+- Scope: {engagement.scope}
+- Original AI Price: ${quote.ai_recommended_price}
+- AI Rationale: {quote.ai_rationale}
+
+CONSULTANT COUNTER-PROPOSAL:
+- Requested Price: ${counter_price}
+- Consultant's Reason: "{reason}"
+
+RULES:
+1. You must settle on a SINGLE final price.
+2. If the consultant's reason is valid (e.g., hidden complexity), move the price closer to their request.
+3. If the reason is vague, stay closer to the original AI price.
+4. Output ONLY valid JSON.
+
+OUTPUT FORMAT:
+{{
+  "settled_price": <number>,
+  "mediation_note": "<1-2 sentence explanation of why this price was chosen>"
+}}
+"""
+    try:
+        content = call_groq_api(
+            messages=[{"role": "user", "content": negotiation_prompt}],
+            preferred_model="llama-3.1-8b-instant",
+            fallback_model="llama-3.3-70b-versatile",
+            response_format={"type": "json_object"}
+        )
+        mediation = json.loads(content)
+        
+        quote.final_price = mediation.get('settled_price', quote.final_price)
+        quote.negotiation_reason = f"CONSULTANT: {reason} | AI MEDIATOR: {mediation.get('mediation_note')}"
+        quote.status = 'accepted' # Automatically accept the settled price for MVP
+        quote.save()
+
+        # Update engagement status if needed
+        engagement.consultant_acceptance_status = 'accepted'
+        engagement.status = 'active'
+        engagement.save()
+
+        return Response({
+            "success": True, 
+            "message": f"AI Mediator has settled the price at ${quote.final_price}. Lead is now accepted.",
+            "settled_price": float(quote.final_price),
+            "note": mediation.get('mediation_note')
+        })
+    except Exception as e:
+        return Response({"error": f"AI mediation failed: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_messages(_request, engagement_id):
+    try:
+        messages = Message.objects.filter(engagement_id=engagement_id).order_by('created_at')
+        return Response({
+            "messages": [{
+                "id": str(m.id),
+                "sender_type": m.sender_type,
+                "sender_id": str(m.sender_id),
+                "text": m.text,
+                "created_at": m.created_at,
+                "is_read": m.is_read
+            } for m in messages]
+        })
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def send_message(request, engagement_id):
+    try:
+        data = request.data
+        msg = Message.objects.create(
+            engagement_id=engagement_id,
+            sender_type=data.get('sender_type'),
+            sender_id=data.get('sender_id'),
+            text=data.get('text')
+        )
+        return Response({
+            "success": True,
+            "message": {
+                "id": str(msg.id),
+                "created_at": msg.created_at
+            }
+        })
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

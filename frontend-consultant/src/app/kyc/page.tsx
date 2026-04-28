@@ -4,6 +4,7 @@ import { BaseLayout } from "@/components/BaseLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, Circle, AlertCircle, Upload, ShieldCheck } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export default function KYCPage() {
   const documents = [
