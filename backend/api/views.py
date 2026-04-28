@@ -6,7 +6,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.utils import timezone
 from groq import Groq
-from .models import Client, Engagement, EngagementQuote, ClientPayment, Consultant, Message
+from .models import Client, Engagement, EngagementQuote, ClientPayment, Consultant, Message, Lead, Payout
 
 def call_groq_api(messages, preferred_model, fallback_model, response_format=None, max_tokens=2048):
     """
@@ -869,3 +869,150 @@ def send_message(request, engagement_id):
         })
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+# --- SUPERADMIN VIEWS ---
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def admin_dashboard_stats(_request):
+    from django.db.models import Sum
+    
+    total_revenue = ClientPayment.objects.filter(status='paid').aggregate(t=Sum('amount'))['t'] or 0
+    total_clients = Client.objects.count()
+    total_consultants = Consultant.objects.count()
+    active_projects = Engagement.objects.filter(status='active').count()
+    unassigned_projects = Engagement.objects.filter(consultant__isnull=True).count()
+    pending_leads = Lead.objects.filter(pipeline_stage='submitted').count()
+    
+    return Response({
+        "stats": {
+            "total_revenue": float(total_revenue),
+            "total_clients": total_clients,
+            "total_consultants": total_consultants,
+            "active_projects": active_projects,
+            "unassigned_projects": unassigned_projects,
+            "pending_leads": pending_leads
+        }
+    })
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def admin_list_unassigned_engagements(_request):
+    engagements = Engagement.objects.filter(consultant__isnull=True).select_related('client').order_by('-created_at')
+    
+    return Response({
+        "engagements": [{
+            "id": str(e.id),
+            "client_name": e.client.organization_name,
+            "scope": e.scope,
+            "stage": e.stage,
+            "created_at": e.created_at,
+            "status": e.status
+        } for e in engagements]
+    })
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def admin_assign_consultant(request):
+    engagement_id = request.data.get('engagement_id')
+    consultant_id = request.data.get('consultant_id')
+    
+    try:
+        engagement = Engagement.objects.get(id=engagement_id)
+        consultant = Consultant.objects.get(id=consultant_id)
+        
+        engagement.consultant = consultant
+        engagement.consultant_acceptance_status = 'pending'
+        engagement.save()
+        
+        # Update client status as well
+        client = engagement.client
+        client.assigned_consultant_id = consultant.id
+        client.assignment_status = 'assigned'
+        client.save()
+        
+        return Response({"success": True, "message": f"Assigned {consultant.full_name} to project."})
+    except (Engagement.DoesNotExist, Consultant.DoesNotExist):
+        return Response({"error": "Engagement or Consultant not found."}, status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def admin_list_leads(_request):
+    leads = Lead.objects.select_related('submitted_by').order_by('-submitted_at')
+    
+    return Response({
+        "leads": [{
+            "id": str(l.id),
+            "submitted_by": l.submitted_by.full_name,
+            "organization_name": l.organization_name,
+            "contact_email": l.contact_email,
+            "domain": l.domain,
+            "estimated_value": float(l.estimated_value),
+            "pipeline_stage": l.pipeline_stage,
+            "submitted_at": l.submitted_at
+        } for l in leads]
+    })
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def admin_update_lead_status(request):
+    lead_id = request.data.get('lead_id')
+    new_stage = request.data.get('pipeline_stage')
+    
+    try:
+        lead = Lead.objects.get(id=lead_id)
+        lead.pipeline_stage = new_stage
+        lead.save()
+        return Response({"success": True, "message": "Lead status updated."})
+    except Lead.DoesNotExist:
+        return Response({"error": "Lead not found."}, status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def admin_list_consultants(_request):
+    consultants = Consultant.objects.all().order_by('-onboarded_at')
+    
+    return Response({
+        "consultants": [{
+            "id": str(c.id),
+            "full_name": c.full_name,
+            "email": c.email,
+            "expertise": c.domain_expertise,
+            "status": c.availability_status,
+            "kyc": c.kyc_status,
+            "rating": c.rating
+        } for c in consultants]
+    })
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def admin_list_clients(_request):
+    clients = Client.objects.all().order_by('-onboarded_at')
+    
+    return Response({
+        "clients": [{
+            "id": str(c.id),
+            "organization": c.organization_name,
+            "contact": c.contact_name,
+            "email": c.email,
+            "country": c.country,
+            "status": c.assignment_status
+        } for c in clients]
+    })
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def admin_list_all_engagements(_request):
+    engagements = Engagement.objects.select_related('client', 'consultant').order_by('-created_at')
+    
+    return Response({
+        "engagements": [{
+            "id": str(e.id),
+            "client_name": e.client.organization_name,
+            "consultant_name": e.consultant.full_name if e.consultant else "Unassigned",
+            "status": e.status,
+            "payment_status": e.payment_status,
+            "start_date": e.start_date,
+            "scope": e.scope
+        } for e in engagements]
+    })

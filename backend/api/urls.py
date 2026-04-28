@@ -21,4 +21,14 @@ urlpatterns = [
     path('consultant/leads/negotiate/', views.consultant_negotiate_lead, name='consultant_negotiate_lead'),
     path('engagements/<uuid:engagement_id>/messages/', views.get_messages, name='get_messages'),
     path('engagements/<uuid:engagement_id>/messages/send/', views.send_message, name='send_message'),
+    
+    # Superadmin Routes
+    path('admin/stats/', views.admin_dashboard_stats, name='admin_stats'),
+    path('admin/projects/unassigned/', views.admin_list_unassigned_engagements, name='admin_unassigned'),
+    path('admin/projects/all/', views.admin_list_all_engagements, name='admin_all_projects'),
+    path('admin/projects/assign/', views.admin_assign_consultant, name='admin_assign_consultant'),
+    path('admin/leads/', views.admin_list_leads, name='admin_leads'),
+    path('admin/leads/update/', views.admin_update_lead_status, name='admin_update_lead_status'),
+    path('admin/consultants/', views.admin_list_consultants, name='admin_consultants'),
+    path('admin/clients/', views.admin_list_clients, name='admin_clients'),
 ]
